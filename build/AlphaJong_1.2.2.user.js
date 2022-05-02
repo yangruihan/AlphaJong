@@ -17,7 +17,7 @@
 //################################
 
 //DEFENSE CONSTANTS
-var FOLD_CONSTANT = 10; //Lower -> Earlier Fold. Default: 10
+var FOLD_CONSTANT = 12; //Lower -> Earlier Fold. Default: 10
 
 //CALLS
 var CALL_CONSTANT = 3; //Amount of han (Open Yaku + Dora) that is needed for calls (to accelerate high value hands). Default: 3
@@ -27,14 +27,14 @@ var CALL_KAN_CONSTANT = 60; //Higher Value: Higher Threshold for calling Kans. D
 var EFFICIENCY_VALUE = 1; // 0 -> ignore Efficiency (lol). Default: 1
 var YAKU_VALUE = 0.5; // 0 -> ignore Yaku. Default: 0.5
 var DORA_VALUE = 0.3; // 0 -> ignore Dora. Default: 0.3
-var SAFETY_VALUE = 0.5; // 0 -> Ignore Safety. Default: 0.5
+var SAFETY_VALUE = 0.36; // 0 -> Ignore Safety. Default: 0.5
 var WAIT_VALUE = 0.3; // Value for good waits when tenpai. Maximum: 1. Default: 0.3
 var SAKIGIRI_VALUE = 0.3; // 0 -> Never Sakigiri. Default: 0.3
 
 //STRATEGY CONSTANTS
 var CHIITOITSU = 5; //Number of Pairs in Hand to go for chiitoitsu. Default: 5
 var THIRTEEN_ORPHANS = 10; //Number of Honor/Terminals in hand to go for 13 orphans (Not yet implemented). Default: 10
-var RIICHI_TILES_LEFT = 6; //Minimum amount of tiles that need to be left for calling Riichi. Default: 6
+var RIICHI_TILES_LEFT = 5; //Minimum amount of tiles that need to be left for calling Riichi. Default: 6
 var WAITS_FOR_RIICHI = 5; //Amount of waits that is considered good enough for calling Riichi. Default: 5
 
 //MISC
@@ -42,21 +42,11 @@ var LOG_AMOUNT = 3; //Amount of Messages to log for Tile Priorities
 var DEBUG_BUTTON = false; //Display a Debug Button in the GUI
 var LOW_SPEC_MODE = false; //Decrease calculation time
 
-var USE_EMOJI = true; //use EMOJI to show tile
+
 
 
 //### GLOBAL VARIABLES DO NOT CHANGE ###
 var run = false; //Is the bot running
-
-const AIMODE = { //ENUM of AI mode
-	AUTO: 0,
-	HELP: 1,
-}
-const AIMODE_NAME = [ //Name of AI mode
-	"Auto",
-	"Help",
-]
-
 const STRATEGIES = { //ENUM of strategies
 	GENERAL: 'General',
 	CHIITOITSU: 'Chiitoitsu',
@@ -80,7 +70,6 @@ var lastTilesLeft = 0; //Counter to check if bot is working
 var isConsideringCall = false;
 var riichiTiles = [null, null, null, null]; // Track players discarded tiles on riichi
 var functionsExtended = false;
-var showingStrategy = false; //Current in own turn?
 
 //TEST
 var testRunning = false;
@@ -99,9 +88,6 @@ var AUTORUN = window.localStorage.getItem("alphajongAutorun") == "true";
 var ROOM = window.localStorage.getItem("alphajongRoom");
 ROOM = ROOM == null ? 2 : ROOM
 
-var MODE = window.localStorage.getItem("alphajongAIMode")
-MODE = MODE == null ? AIMODE.AUTO : parseInt(MODE);
-
 //Factorials for chance of tile draw calculation. Pre calculated to save time
 var facts = [1, 1, 2, 6, 24, 120, 720, 5040, 40320, 362880, 3628800, 39916800, 479001600, 6227020800, 87178291200, 1307674368000, 20922789888000, 355687428096000, 6402373705728000, 121645100408832000, 2432902008176640000, 51090942171709440000, 1.1240007277776077e+21, 2.585201673888498e+22, 6.204484017332394e+23, 1.5511210043330986e+25, 4.0329146112660565e+26, 1.0888869450418352e+28, 3.0488834461171384e+29, 8.841761993739701e+30, 2.6525285981219103e+32, 8.222838654177922e+33, 2.631308369336935e+35, 8.683317618811886e+36, 2.9523279903960412e+38, 1.0333147966386144e+40, 3.719933267899012e+41, 1.3763753091226343e+43, 5.23022617466601e+44, 2.0397882081197442e+46, 8.159152832478977e+47, 3.3452526613163803e+49, 1.4050061177528798e+51, 6.041526306337383e+52, 2.6582715747884485e+54, 1.1962222086548019e+56, 5.5026221598120885e+57, 2.5862324151116818e+59, 1.2413915592536073e+61, 6.082818640342675e+62, 3.0414093201713376e+64, 1.5511187532873822e+66, 8.065817517094388e+67, 4.2748832840600255e+69, 2.308436973392414e+71, 1.2696403353658276e+73, 7.109985878048635e+74, 4.052691950487722e+76, 2.350561331282879e+78, 1.3868311854568986e+80, 8.320987112741392e+81, 5.075802138772248e+83, 3.146997326038794e+85, 1.98260831540444e+87, 1.2688693218588417e+89, 8.247650592082472e+90, 5.443449390774431e+92, 3.647111091818868e+94, 2.4800355424368305e+96, 1.711224524281413e+98, 1.197857166996989e+100, 8.504785885678622e+101, 6.123445837688608e+103, 4.4701154615126834e+105, 3.3078854415193856e+107, 2.480914081139539e+109, 1.8854947016660498e+111, 1.4518309202828584e+113, 1.1324281178206295e+115, 8.946182130782973e+116, 7.156945704626378e+118, 5.797126020747366e+120, 4.75364333701284e+122, 3.945523969720657e+124, 3.314240134565352e+126, 2.8171041143805494e+128, 2.4227095383672724e+130, 2.107757298379527e+132, 1.8548264225739836e+134, 1.6507955160908452e+136, 1.4857159644817607e+138, 1.3520015276784023e+140, 1.24384140546413e+142, 1.1567725070816409e+144, 1.0873661566567424e+146, 1.0329978488239052e+148, 9.916779348709491e+149, 9.619275968248206e+151, 9.426890448883242e+153, 9.33262154439441e+155, 9.33262154439441e+157, 9.425947759838354e+159, 9.614466715035121e+161, 9.902900716486175e+163, 1.0299016745145622e+166, 1.0813967582402903e+168, 1.1462805637347078e+170, 1.2265202031961373e+172, 1.3246418194518284e+174, 1.4438595832024928e+176, 1.5882455415227421e+178, 1.7629525510902437e+180, 1.9745068572210728e+182, 2.2311927486598123e+184, 2.543559733472186e+186, 2.925093693493014e+188, 3.3931086844518965e+190, 3.969937160808719e+192, 4.6845258497542883e+194, 5.574585761207603e+196, 6.689502913449124e+198, 8.09429852527344e+200, 9.875044200833598e+202, 1.2146304367025325e+205, 1.5061417415111404e+207, 1.8826771768889254e+209, 2.372173242880046e+211, 3.012660018457658e+213, 3.8562048236258025e+215, 4.9745042224772855e+217, 6.466855489220472e+219, 8.471580690878817e+221, 1.118248651196004e+224, 1.4872707060906852e+226, 1.992942746161518e+228];
 
@@ -114,7 +100,6 @@ var guiDiv = document.createElement("div");
 var guiSpan = document.createElement("span");
 var startButton = document.createElement("button");
 var autorunCheckbox = document.createElement("input");
-var aimodeCombobox = document.createElement("select");
 var roomCombobox = document.createElement("select");
 var currentActionOutput = document.createElement("input");
 var debugButton = document.createElement("button");
@@ -158,16 +143,9 @@ function initGui() {
 	guiSpan.appendChild(autorunCheckbox);
 	var checkboxLabel = document.createElement("label");
 	checkboxLabel.htmlFor = "autorun";
-	checkboxLabel.appendChild(document.createTextNode('Autostart'));
-	checkboxLabel.style.marginRight = "15px";
+	checkboxLabel.appendChild(document.createTextNode('Autostart new Game in'));
+	checkboxLabel.style.marginRight = "5px";
 	guiSpan.appendChild(checkboxLabel);
-
-	refreshAIMode();
-	aimodeCombobox.style.marginRight = "15px";
-	aimodeCombobox.onchange = function() {
-		aiModeChange();
-	};
-	guiSpan.appendChild(aimodeCombobox);
 
 	refreshRoomSelection();
 
@@ -184,9 +162,9 @@ function initGui() {
 	currentActionOutput.readOnly = "true";
 	currentActionOutput.size = "20";
 	currentActionOutput.style.marginRight = "15px";
-	showCrtActionMsg("Bot is not running.");
+	currentActionOutput.value = "Bot is not running.";
 	if (window.localStorage.getItem("alphajongAutorun") == "true") {
-		showCrtActionMsg("Bot started.");
+		currentActionOutput.value = "Bot started.";
 	}
 	guiSpan.appendChild(currentActionOutput);
 
@@ -222,13 +200,8 @@ function showDebugString() {
 	alert("If you notice a bug while playing please go to the correct turn in the replay (before the bad discard), press this button, copy the Debug String from the textbox and include it in your issue on github.");
 	if (isInGame()) {
 		setData();
-		showCrtActionMsg(getDebugString());
+		currentActionOutput.value = getDebugString();
 	}
-}
-
-function aiModeChange() {
-	window.localStorage.setItem("alphajongAIMode", aimodeCombobox.value);
-	MODE = parseInt(aimodeCombobox.value);
 }
 
 function roomChange() {
@@ -253,18 +226,6 @@ function autorunCheckboxClick() {
 	}
 }
 
-// Refresh the AI mode
-function refreshAIMode() {
-	aimodeCombobox.innerHTML = AIMODE_NAME[MODE];
-	for (let i = 0; i < AIMODE_NAME.length; i++) {
-		var option = document.createElement("option");
-		option.text = AIMODE_NAME[i];
-		option.value = i;
-		aimodeCombobox.appendChild(option);
-	}
-	aimodeCombobox.value = MODE;
-}
-
 // Refresh the contents of the Room Selection Combobox with values appropiate for the rank
 function refreshRoomSelection() {
 	roomCombobox.innerHTML = ""; // Clear old entries
@@ -277,24 +238,6 @@ function refreshRoomSelection() {
 		}
 	});
 	roomCombobox.value = ROOM;
-}
-
-// Show msg to currentActionOutput
-function showCrtActionMsg(msg) {
-	if (!showingStrategy) {
-		currentActionOutput.value =  msg;
-	}
-}
-
-// Apend msg to currentActionOutput
-function showCrtStrategyMsg(msg) {
-	showingStrategy = true;
-	currentActionOutput.value = msg;
-}
-
-function clearCrtStrategyMsg() {
-	showingStrategy = false;
-	currentActionOutput.value = "";
 }
 //################################
 // API (MAHJONG SOUL)
@@ -431,76 +374,40 @@ function getTileForCall() {
 }
 
 function makeCall(type) {
-	if (MODE === AIMODE.AUTO) {
-		app.NetAgent.sendReq2MJ('FastTest', 'inputChiPengGang', { type: type, index: 0, timeuse: Math.random() * 2 + 1 });
-		view.DesktopMgr.Inst.WhenDoOperation();
-	} else {
-		showCrtStrategyMsg(`call ${getCallNameByType(type)} accepted;`);
-	}
+	app.NetAgent.sendReq2MJ('FastTest', 'inputChiPengGang', { type: type, index: 0, timeuse: 2 });
+	view.DesktopMgr.Inst.WhenDoOperation();
 }
 
 function makeCallWithOption(type, option) {
-	if (MODE === AIMODE.AUTO) {
-		app.NetAgent.sendReq2MJ('FastTest', 'inputChiPengGang', { type: type, index: option, timeuse: Math.random() * 2 + 1 });
-		view.DesktopMgr.Inst.WhenDoOperation();
-	} else {
-		try {
-			var tileName = getTileName(option);
-			showCrtStrategyMsg(`call ${getCallNameByType(type)} with ${tileName} accepted;`);
-		} catch (error) {
-			showCrtStrategyMsg(`call ${getCallNameByType(type)} with ${option} accepted;`);
-		}
-	}
+	app.NetAgent.sendReq2MJ('FastTest', 'inputChiPengGang', { type: type, index: option, timeuse: 2 });
+	view.DesktopMgr.Inst.WhenDoOperation();
 }
 
 function declineCall(operation) {
-	if (MODE === AIMODE.AUTO) {
-		if (operation == getOperationList()[getOperationList().length - 1].type) { //Is last operation -> Send decline Command
-			app.NetAgent.sendReq2MJ('FastTest', 'inputChiPengGang', { cancel_operation: true, timeuse: Math.random() * 2 + 1 });
-			view.DesktopMgr.Inst.WhenDoOperation();
-		}
-	} else {
-		showCrtStrategyMsg(`call ${getCallNameByType(operation)} declined;`);
+	if (operation == getOperationList()[getOperationList().length - 1].type) { //Is last operation -> Send decline Command
+		app.NetAgent.sendReq2MJ('FastTest', 'inputChiPengGang', { cancel_operation: true, timeuse: 2 });
+		view.DesktopMgr.Inst.WhenDoOperation();
 	}
 }
 
 function sendRiichiCall(tile, moqie) {
-	if (MODE === AIMODE.AUTO) {
-		app.NetAgent.sendReq2MJ('FastTest', 'inputOperation', { type: mjcore.E_PlayOperation.liqi, tile: tile, moqie: moqie, timeuse: Math.random() * 2 + 1 }); //Moqie: Throwing last drawn tile (Riichi -> false)
-	} else {
-		let tileName = getTileName(tile);
-		showCrtStrategyMsg(`riichi ${tileName};`);
-	}
+	app.NetAgent.sendReq2MJ('FastTest', 'inputOperation', { type: mjcore.E_PlayOperation.liqi, tile: tile, moqie: moqie, timeuse: 2 }); //Moqie: Throwing last drawn tile (Riichi -> false)
 }
 
 function sendKitaCall() {
-	if (MODE === AIMODE.AUTO) {
-		var moqie = view.DesktopMgr.Inst.mainrole.last_tile.val.toString() == "4z";
-		app.NetAgent.sendReq2MJ('FastTest', 'inputOperation', { type: mjcore.E_PlayOperation.babei, moqie: moqie, timeuse: Math.random() * 2 + 1 });
-		view.DesktopMgr.Inst.WhenDoOperation();
-	} else {
-		showCrtStrategyMsg(`kita accepted;`);
-	}
+	var moqie = view.DesktopMgr.Inst.mainrole.last_tile.val.toString() == "4z";
+	app.NetAgent.sendReq2MJ('FastTest', 'inputOperation', { type: mjcore.E_PlayOperation.babei, moqie: moqie, timeuse: 2 });
+	view.DesktopMgr.Inst.WhenDoOperation();
 }
 
 function sendAbortiveDrawCall() {
-	if (MODE === AIMODE.AUTO) {
-		app.NetAgent.sendReq2MJ('FastTest', 'inputOperation', { type: mjcore.E_PlayOperation.jiuzhongjiupai, index: 0, timeuse: Math.random() * 2 + 1 });
-		view.DesktopMgr.Inst.WhenDoOperation();
-	} else {
-		showCrtStrategyMsg(`Kyuushu Kyuuhai accepted;`);
-	}
+	app.NetAgent.sendReq2MJ('FastTest', 'inputOperation', { type: mjcore.E_PlayOperation.jiuzhongjiupai, index: 0, timeuse: 2 });
+	view.DesktopMgr.Inst.WhenDoOperation();
 }
 
 function callDiscard(tileNumber) {
-	if (MODE === AIMODE.AUTO) {
-		view.DesktopMgr.Inst.players[0]._choose_pai = view.DesktopMgr.Inst.players[0].hand[tileNumber];
-		view.DesktopMgr.Inst.players[0].DoDiscardTile();
-	} else {
-		let tile = ownHand[tileNumber];
-		let tileName = getTileName(tile);
-		showCrtStrategyMsg(`discard ${tileName};`);
-	}
+	view.DesktopMgr.Inst.players[0]._choose_pai = view.DesktopMgr.Inst.players[0].hand[tileNumber];
+	view.DesktopMgr.Inst.players[0].DoDiscardTile();
 }
 
 function getPlayerLinkState(player) {
@@ -1284,71 +1191,6 @@ function binomialCoefficient(a, b) {
 	return numerator / denominator;
 } 
 
-function getCallNameByType(type) {
-	switch (type) {
-		case 1: return "discard";
-		case 2: return "chi";
-		case 3: return "pon";
-		case 4: return "kan(ankan)";
-		case 5: return "kan(daiminkan)";
-		case 6: return "kan(shouminkan)";
-		case 7: return "riichi";
-		case 8: return "tsumo";
-		case 9: return "ron";
-		case 10: return "kyuushu kyuuhai";
-		case 11: return "kita";
-		default: return type;
-	}
-}
-
-//Get Emoji str by tile name
-function getTileEmoji(name) {
-	switch (name) {
-		case "0m": return "red🀋";
-		case "1m": return "🀇";
-		case "2m": return "🀈";
-		case "3m": return "🀉";
-		case "4m": return "🀊";
-		case "5m": return "🀋";
-		case "6m": return "🀌";
-		case "7m": return "🀍";
-		case "8m": return "🀎";
-		case "9m": return "🀏";
-
-		case "0s": return "red🀔";
-		case "1s": return "🀐";
-		case "2s": return "🀑";
-		case "3s": return "🀒";
-		case "4s": return "🀓";
-		case "5s": return "🀔";
-		case "6s": return "🀕";
-		case "7s": return "🀖";
-		case "8s": return "🀗";
-		case "9s": return "🀘";
-
-		case "0p": return "red🀝";
-		case "1p": return "🀙";
-		case "2p": return "🀚";
-		case "3p": return "🀛";
-		case "4p": return "🀜";
-		case "5p": return "🀝";
-		case "6p": return "🀞";
-		case "7p": return "🀟";
-		case "8p": return "🀠";
-		case "9p": return "🀡";
-
-		case "1z": return "🀀";
-		case "2z": return "🀁";
-		case "3z": return "🀂";
-		case "4z": return "🀃";
-		case "5z": return "🀆";
-		case "6z": return "🀅";
-		case "7z": return "🀄";
-
-		default:
-			return name;
-	}
-}
 //################################
 // LOGGING
 // Contains logging functions
@@ -1472,18 +1314,10 @@ function getTileFromString(inputString) {
 
 //Returns the name for a tile
 function getTileName(tile) {
-	let name = "";
 	if (tile.dora == true) {
-		name =  "0" + getNameForType(tile.type);
-	} else {
-		name = tile.index + getNameForType(tile.type);
+		return "0" + getNameForType(tile.type);
 	}
-
-	if (USE_EMOJI) {
-		return getTileEmoji(name);
-	} else {
-		return name;
-	}
+	return tile.index + getNameForType(tile.type);
 }
 
 //Returns the corresponding char for a type
@@ -1737,7 +1571,7 @@ function getYaku(inputHand, inputCalls) {
 	//Chuuren poutou
 	//9 Gates
 	//Closed
-	let chuurenpoutou = getChuurenPoutou(hand, triplets, sequences);
+	let chuurenpoutou = getChuurenPoutou(hand);
 	yakuOpen += chuurenpoutou.open;
 	yakuClosed += chuurenpoutou.closed
 
@@ -1930,32 +1764,9 @@ function getSuushiihou(hand) {
 }
 
 //ChuurenPoutou
-function getChuurenPoutou(hand, triplets, sequences) {
+function getChuurenPoutou(hand, pairs) {
 	if (hand.find(tile => tile.type != hand[0].type)) {
 		return { open: 0, closed: 0 };
-	}
-
-	let crtIdx = 1;
-	let red_five = false;
-
-	if (hand[0].index === 0) {
-		red_five = true;
-	}
-
-	for (let idx = red_five ? 1 : 0; idx < hand.length; idx++) {
-		if (hand[idx].index === crtIdx + 1) {
-			crtIdx++;
-		} else if (hand[idx].index === 6 && crtIdx === 4 && red_five) { // red five?
-			crtIdx = 6;
-		}
-	}
-
-	if (crtIdx != 9) {
-		return { open: 0, closed: 0 };
-	}
-
-	if (parseInt(triplets.length / 3) === 1 && parseInt(sequences.length / 3) === 3) {
-		return { open: YAKUMAN_SCORE, closed: YAKUMAN_SCORE };
 	}
 
 	return { open: 0, closed: 0 };
@@ -3122,7 +2933,7 @@ if (!isDebug()) {
 	window.onkeyup = function (e) {
 		var key = e.keyCode ? e.keyCode : e.which;
 
-		if (key == 107 || key == 65) { // Numpad + Key
+		if (key == 107) { // Numpad + Key
 			toggleGui();
 		}
 	}
@@ -3132,23 +2943,19 @@ if (!isDebug()) {
 		run = true;
 		setInterval(preventAFK, 30000);
 	}
-
-	log(`crt mode ${AIMODE_NAME[MODE]}`);
-
 	waitForMainLobbyLoad();
 }
 
 function toggleRun() {
-	clearCrtStrategyMsg();
 	if (run) {
 		log("AlphaJong deactivated!");
 		run = false;
-		startButton.innerHTML = "Start Bot";
+		startButton.innerHTML = "Start Bot"
 	}
 	else if (!run) {
 		log("AlphaJong activated!");
 		run = true;
-		startButton.innerHTML = "Stop Bot";
+		startButton.innerHTML = "Stop Bot"
 		main();
 	}
 }
@@ -3162,7 +2969,7 @@ function waitForMainLobbyLoad() {
 
 	if (!hasFinishedMainLobbyLoading()) { //Otherwise wait for Main Lobby to load and then search for game
 		log("Waiting for Main Lobby to load...");
-		showCrtActionMsg("Wait for Loading.");
+		currentActionOutput.value = "Wait for Loading.";
 		setTimeout(waitForMainLobbyLoad, 2000);
 		return;
 	}
@@ -3176,12 +2983,12 @@ function waitForMainLobbyLoad() {
 //Main Loop
 function main() {
 	if (!run) {
-		showCrtActionMsg("Bot is not running.");
+		currentActionOutput.value = "Bot is not running.";
 		return;
 	}
 	if (!isInGame()) {
 		checkForEnd();
-		showCrtActionMsg("Waiting for Game to start.");
+		currentActionOutput.value = "Waiting for Game to start.";
 		log("Game is not running, sleep 2 seconds.");
 		errorCounter++;
 		if (errorCounter > 90 && AUTORUN) { //3 minutes no game found -> reload page
@@ -3209,60 +3016,18 @@ function main() {
 			errorCounter = 0;
 		}
 		log("Waiting for own turn, sleep 1 second.");
-		clearCrtStrategyMsg();
-		showCrtActionMsg("Waiting for own turn.");
+		currentActionOutput.value = "Waiting for own turn.";
 		setTimeout(main, 1000);
-
-		if (MODE === AIMODE.HELP) {
-			oldOps = [];
-		}
-
 		return;
 	}
+
+	currentActionOutput.value = "Calculating best move...";
 
 	setTimeout(mainOwnTurn, 500 + (Math.random() * 500));
 }
 
-var oldOps = []
-function recordPlayerOps() {
-	oldOps = []
-	
-	let ops = getOperationList();
-	for (let op of ops) { 
-		oldOps.push(op.type)
-	}
-}
-
-function checkPlayerOpChanged() {
-	let ops = getOperationList();
-	if (ops.length !== oldOps.length) {
-		return true;
-	}
-
-	for (let i = 0; i < ops.length; i++) {
-		if (ops[i].type !== oldOps[i]) {
-			return true;
-		}
-	}
-
-	return false;
-}
-
 function mainOwnTurn() {
-	showCrtActionMsg("Calculating best move...");
-
-	//HELP MODE, if player not operate, just skip
-	if (MODE === AIMODE.HELP) {
-		if (!checkPlayerOpChanged()) {
-			setTimeout(main, 1000);
-			return;
-		} else {
-			recordPlayerOps();
-		}
-	}
-
 	setData(); //Set current state of the board to local variables
-
 	var operations = getOperationList();
 
 	log("##### OWN TURN #####");
@@ -3323,9 +3088,7 @@ function mainOwnTurn() {
 	}
 
 	log(" ");
-	if (MODE === AIMODE.AUTO) {
-		showCrtActionMsg("Own turn completed.");
-	}
+	currentActionOutput.value = "Own turn completed.";
 	setTimeout(main, 1000);
 }
 
@@ -3387,7 +3150,7 @@ function setData() {
 function startGame() {
 	if (!isInGame() && run && AUTORUN) {
 		log("Searching for Game in Room " + ROOM);
-		showCrtActionMsg("Searching for Game...");
+		currentActionOutput.value = "Searching for Game...";
 		searchForGame();
 	}
 }
