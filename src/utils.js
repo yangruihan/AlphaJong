@@ -307,7 +307,7 @@ function getTilesInTileArray(tileArray, index, type) {
 //Update the available tile pool
 function updateAvailableTiles() {
 	visibleTiles = dora.concat(ownHand, discards[0], discards[1], discards[2], discards[3], calls[0], calls[1], calls[2], calls[3]);
-	visibleTiles = visibleTiles.filter(tile => tile != undefined);
+	visibleTiles = visibleTiles.filter(tile => typeof tile != 'undefined');
 	availableTiles = [];
 	for (var i = 0; i <= 3; i++) {
 		for (var j = 1; j <= 9; j++) {
@@ -383,7 +383,7 @@ function checkWin(hand) {
 
 //Returns true if DEBUG flag is set
 function isDebug() {
-	return typeof DEBUG != "undefined";
+	return typeof DEBUG != 'undefined';
 }
 
 //Adds calls of player 0 to the hand
@@ -549,7 +549,7 @@ function calculateScore(player, han, fu = 30) {
 	return score;
 }
 
-//Calculate the Fu Value for given parameters. NOt 100% accurate, but good enough
+//Calculate the Fu Value for given parameters. Not 100% accurate, but good enough
 function calculateFu(triples, openTiles, pair, waitTiles, winningTile, ron = true) {
 	var fu = 20;
 
@@ -586,12 +586,6 @@ function calculateFu(triples, openTiles, pair, waitTiles, winningTile, ron = tru
 			fu += 2;
 		}
 	});
-	for (let tile of calls[0]) { //Is hand closed? Also consider closed Kans
-		if (tile.from != localPosition2Seat(0)) {
-			isClosed = false;
-			break;
-		}
-	}
 
 	//Kans: Add to existing fu of pon
 	kans.forEach(function (tile) {
