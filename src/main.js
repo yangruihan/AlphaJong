@@ -82,6 +82,8 @@ function main() {
 		goToLobby();
 	}
 
+	injectView();
+
 	var operations = getOperationList(); //Get possible Operations
 
 	if (operations == null || operations.length == 0) {
@@ -223,6 +225,7 @@ function setData(mainUpdate = true) {
 	dora = getDora();
 
 	ownHand = [];
+	handTilesdValue = [];
 	for (let hand of getPlayerHand()) { //Get own Hand
 		ownHand.push(hand.val);
 	}
@@ -296,4 +299,32 @@ function checkForEnd() {
 //Reload Page to get back to lobby
 function goToLobby() {
 	location.reload(1);
+	viewInjected = false;
+}
+
+function injectView() {
+	if (viewInjected) {
+		return;
+	}
+	viewInjected = true;
+
+	const m = view.DesktopMgr.prototype.setChoosedPai;
+	view.DesktopMgr.prototype.setChoosedPai = (e, ...rest) => {
+		const r = m.call(view.DesktopMgr.Inst, e, ...rest); // render normally
+
+		if (crtSelectTile != null && e == null) {
+			showCrtChoosedTileInfo("");
+		}
+
+		if (handTilesdValue.length > 0 && e != null && e != crtSelectTile) {
+			let tileItem = handTilesdValue.find(i => i.tile.index === e.index && i.tile.type === e.type && i.tile.dora === e.dora);
+			if (tileItem != 'undefined') {
+				showCrtChoosedTileInfo(getTilePriorityString(tileItem));
+			}
+		}
+
+		crtSelectTile = e;
+
+		return r;
+	}
 }

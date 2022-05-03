@@ -68,6 +68,11 @@ var functionsExtended = false;
 var showingStrategy = false; //Current in own turn?
 var playerDiscardSafetyList = [[], [], [], []];
 
+//crt choosed tile info variables
+var viewInjected = false;
+var crtSelectTile = null;
+var handTilesdValue = [];
+
 //LOCAL STORAGE
 var AUTORUN = window.localStorage.getItem("alphajongAutorun") == "true";
 var ROOM = window.localStorage.getItem("alphajongRoom");

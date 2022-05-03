@@ -875,6 +875,7 @@ function getMissingTilesForThirteenOrphans(uniqueTerminalHonors) {
 function discard() {
 
 	var tiles = getTilePriorities(ownHand);
+	handTilesdValue = tiles;
 
 	if (strategy == STRATEGIES.FOLD || shouldFold(tiles)) {
 		return discardFold(tiles);

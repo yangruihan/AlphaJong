@@ -10,6 +10,7 @@ var autorunCheckbox = document.createElement("input");
 var aimodeCombobox = document.createElement("select");
 var roomCombobox = document.createElement("select");
 var currentActionOutput = document.createElement("input");
+var currentChoosedTileInfo = document.createElement("textarea");
 var debugButton = document.createElement("button");
 var hideButton = document.createElement("button");
 
@@ -82,6 +83,13 @@ function initGui() {
 		showCrtActionMsg("Bot started.");
 	}
 	guiSpan.appendChild(currentActionOutput);
+
+	currentChoosedTileInfo.readOnly = "true";
+	currentActionOutput.size = "15";
+	currentChoosedTileInfo.cols = 20;
+	currentChoosedTileInfo.rows = 10;
+	currentChoosedTileInfo.style.marginRight = "15px";
+	guiSpan.appendChild(currentChoosedTileInfo);
 
 	debugButton.innerHTML = "Debug";
 	debugButton.onclick = function () {
@@ -190,4 +198,8 @@ function showCrtStrategyMsg(msg) {
 function clearCrtStrategyMsg() {
 	showingStrategy = false;
 	currentActionOutput.value = "";
+}
+
+function showCrtChoosedTileInfo(msg) {
+	currentChoosedTileInfo.value = msg;
 }
