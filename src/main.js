@@ -154,6 +154,7 @@ function mainOwnTurn() {
 
 	log("##### OWN TURN #####");
 	log("Debug String: " + getDebugString());
+	log("Current State: " + getDebugString(false));
 	log("Current Danger Level: " + getCurrentDangerLevel());
 
 	determineStrategy(); //Get the Strategy for the current situation. After calls so it does not reset folds
@@ -217,7 +218,7 @@ function mainOwnTurn() {
 }
 
 //Set Data from real Game
-function setData() {
+function setData(mainUpdate = true) {
 
 	dora = getDora();
 
@@ -237,7 +238,9 @@ function setData() {
 		}
 		discards.push(temp_discards);
 	}
-	updateDiscardedTilesSafety();
+	if (mainUpdate) {
+		updateDiscardedTilesSafety();
+	}
 
 	calls = [];
 	for (var j = 0; j < getNumberOfPlayers(); j++) { //Get Calls for all Players
@@ -259,6 +262,7 @@ function setData() {
 		strategyAllowsCalls = true;
 		initialDiscardedTilesSafety();
 		riichiTiles = [null, null, null, null];
+		playerDiscardSafetyList = [[], [], [], []];
 		extendMJSoulFunctions();
 	}
 

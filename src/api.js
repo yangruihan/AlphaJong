@@ -208,7 +208,7 @@ function getPlayerLinkState(player) {
 	return view.DesktopMgr.player_link_state[localPosition2Seat(player)];
 }
 
-function getNumberOfPlayerHand(player) {
+function getNumberOfTilesInHand(player) {
 	player = getCorrectPlayerNumber(player);
 	return view.DesktopMgr.Inst.players[player].hand.length;
 }
@@ -239,7 +239,7 @@ function isInGame() {
 }
 
 function doesPlayerExist(player) {
-	return view.DesktopMgr.Inst.players[player].hand != undefined;
+	return typeof view.DesktopMgr.Inst.players[player].hand != 'undefined';
 }
 
 function getPlayerScore(player) {
@@ -278,7 +278,7 @@ function isInRank(room) {
 		return (roomData.room == 100) || (roomData.level_limit <= rank && roomData.level_limit_ceil >= rank); // room 100 is casual mode
 	}
 	catch {
-		return roomData.room == 100;
+		return roomData.room == 100 || roomData.level_limit > 0; // Display the Casual Rooms and all ranked rooms (no special rooms)
 	}
 }
 
@@ -307,20 +307,26 @@ function extendMJSoulFunctions() {
 	if (functionsExtended) {
 		return;
 	}
-	trackRiichiDiscardTile();
+	trackDiscardTiles();
 	functionsExtended = true;
 }
 
 // Track which tile the players discarded on their riichi turn
-function trackRiichiDiscardTile() {
+function trackDiscardTiles() {
 	for (var i = 1; i < getNumberOfPlayers(); i++) {
 		var player = getCorrectPlayerNumber(i);
 		view.DesktopMgr.Inst.players[player].container_qipai.AddQiPai = (function (_super) { // Extend the MJ-Soul Discard function
 			return function () {
 				if (arguments[1]) { // Contains true when Riichi
 					riichiTiles[seat2LocalPosition(this.player.seat)] = arguments[0]; // Track tile in riichiTiles Variable
-					log("Riichi Discard: " + arguments[0].toString());
 				}
+				setData(false);
+				visibleTiles.push(arguments[0]);
+				var danger = getTileDanger(arguments[0], null, seat2LocalPosition(this.player.seat));
+				if (arguments[2] && danger < 20) { // Ignore Tsumogiri of a safetile
+					danger = -1;
+				}
+				playerDiscardSafetyList[seat2LocalPosition(this.player.seat)].push(danger);
 				return _super.apply(this, arguments); // Call original function
 			};
 		})(view.DesktopMgr.Inst.players[player].container_qipai.AddQiPai);

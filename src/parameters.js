@@ -4,24 +4,22 @@
 //################################
 
 //DEFENSE CONSTANTS
-var FOLD_CONSTANT = 12; //Lower -> Earlier Fold. Default: 10
+var FOLD_CONSTANT = 10; //Lower -> Earlier Fold. Default: 10
 
 //CALLS
 var CALL_CONSTANT = 3; //Amount of han (Open Yaku + Dora) that is needed for calls (to accelerate high value hands). Default: 3
 var CALL_KAN_CONSTANT = 60; //Higher Value: Higher Threshold for calling Kans. Default: 60
 
 //HAND EVALUATION CONSTANTS. Higher number => more important.
-var EFFICIENCY_VALUE = 1; // 0 -> ignore Efficiency (lol). Default: 1
-var YAKU_VALUE = 0.5; // 0 -> ignore Yaku. Default: 0.5
-var DORA_VALUE = 0.3; // 0 -> ignore Dora. Default: 0.3
-var SAFETY_VALUE = 0.36; // 0 -> Ignore Safety. Default: 0.5
-var WAIT_VALUE = 0.3; // Value for good waits when tenpai. Maximum: 1. Default: 0.3
+var EFFICIENCY_VALUE = 0.5; // From 0-1. Lower: Slower hands. Higher: Daster hands.
+var SCORE_VALUE = 0.5 // From 0-1. Lower: Cheaper hands. Higher: More expensive hands
+var SAFETY_VALUE = 0.5; // From 0-1. Lower: The bot will not pay much attention to safety. Higher: The bot will try to play safer
 var SAKIGIRI_VALUE = 0.3; // 0 -> Never Sakigiri. Default: 0.3
 
 //STRATEGY CONSTANTS
 var CHIITOITSU = 5; //Number of Pairs in Hand to go for chiitoitsu. Default: 5
 var THIRTEEN_ORPHANS = 10; //Number of Honor/Terminals in hand to go for 13 orphans (Not yet implemented). Default: 10
-var RIICHI_TILES_LEFT = 5; //Minimum amount of tiles that need to be left for calling Riichi. Default: 6
+var RIICHI_TILES_LEFT = 6; //Minimum amount of tiles that need to be left for calling Riichi. Default: 6
 var WAITS_FOR_RIICHI = 5; //Amount of waits that is considered good enough for calling Riichi. Default: 5
 
 //MISC
@@ -68,18 +66,7 @@ var isConsideringCall = false;
 var riichiTiles = [null, null, null, null]; // Track players discarded tiles on riichi
 var functionsExtended = false;
 var showingStrategy = false; //Current in own turn?
-
-//TEST
-var testRunning = false;
-var currentTest = 0;
-var passes = 0;
-var startTime = 0;
-var winValues = [];
-var TEST_DANGER_LEVEL = 50;
-var testCallTile = {};
-var testPlayerRiichi = [0, 0, 0, 0];
-var testPlayerHand = [];
-var testStartTime = 0;
+var playerDiscardSafetyList = [[], [], [], []];
 
 //LOCAL STORAGE
 var AUTORUN = window.localStorage.getItem("alphajongAutorun") == "true";
