@@ -20,22 +20,35 @@ function printHand(hand) {
 }
 
 //Get String for array of tiles
-function getStringForTiles(tiles) {
+function getStringForTiles(tiles, useRaw = true) {
 	var tilesString = "";
 	var oldType = "";
 	tiles.forEach(function (tile) {
-		if (getNameForType(tile.type) != oldType) {
-			tilesString += oldType;
-			oldType = getNameForType(tile.type);
+		if (useRaw || !USE_EMOJI) {
+			if (getNameForType(tile.type) != oldType) {
+				tilesString += oldType;
+				oldType = getNameForType(tile.type);
+			}
 		}
+
 		if (tile.dora == 1) {
-			tilesString += "0";
+			if (useRaw || !USE_EMOJI) {
+				tilesString += "0";
+			} else {
+				tilesString += getTileName(tile, false);
+			}
 		}
 		else {
-			tilesString += tile.index;
+			if (useRaw || !USE_EMOJI) {
+				tilesString += tile.index;
+			} else {
+				tilesString += getTileName(tile, false);
+			}
 		}
 	});
-	tilesString += oldType;
+	if (useRaw || !USE_EMOJI) {
+		tilesString += oldType;
+	}
 	return tilesString;
 }
 
@@ -164,21 +177,55 @@ function getNameForType(type) {
 }
 
 //returns a string for the current state of the game
-function getDebugString() {
+function getDebugString(useRaw = true) {
 	var debugString = "";
-	debugString += getStringForTiles(dora) + "|";
-	debugString += getStringForTiles(ownHand) + "|";
-	debugString += getStringForTiles(calls[0]) + "|";
-	debugString += getStringForTiles(calls[1]) + "|";
-	debugString += getStringForTiles(calls[2]) + "|";
-	if (getNumberOfPlayers() == 4) {
-		debugString += getStringForTiles(calls[3]) + "|";
+	if (!useRaw) {
+		debugString += "dora:";
 	}
-	debugString += getStringForTiles(discards[0]) + "|";
-	debugString += getStringForTiles(discards[1]) + "|";
-	debugString += getStringForTiles(discards[2]) + "|";
+	debugString += getStringForTiles(dora, useRaw) + "|";
+	if (!useRaw) {
+		debugString += "hand:";
+	}
+	debugString += getStringForTiles(ownHand, useRaw) + "|";
+	if (!useRaw) {
+		debugString += "call[0]:";
+	}
+	debugString += getStringForTiles(calls[0], useRaw) + "|";
+	if (!useRaw) {
+		debugString += "call[1]:";
+	}
+	debugString += getStringForTiles(calls[1], useRaw) + "|";
+	if (!useRaw) {
+		debugString += "call[2]:";
+	}
+	debugString += getStringForTiles(calls[2], useRaw) + "|";
 	if (getNumberOfPlayers() == 4) {
-		debugString += getStringForTiles(discards[3]) + "|";
+		if (!useRaw) {
+			debugString += "call[3]:";
+		}
+		debugString += getStringForTiles(calls[3], useRaw) + "|";
+	}
+	if (!useRaw) {
+		debugString += "discards[0]:";
+	}
+	debugString += getStringForTiles(discards[0], useRaw) + "|";
+	if (!useRaw) {
+		debugString += "discards[1]:";
+	}
+	debugString += getStringForTiles(discards[1], useRaw) + "|";
+	if (!useRaw) {
+		debugString += "discards[2]:";
+	}
+	debugString += getStringForTiles(discards[2], useRaw) + "|";
+	if (getNumberOfPlayers() == 4) {
+		if (!useRaw) {
+			debugString += "discards[3]:";
+		}
+		debugString += getStringForTiles(discards[3], useRaw) + "|";
+	}
+
+	if (!useRaw) {
+		debugString += "riichi:";
 	}
 	if (getNumberOfPlayers() == 4) {
 		debugString += (isPlayerRiichi(0) * 1) + "," + (isPlayerRiichi(1) * 1) + "," + (isPlayerRiichi(2) * 1) + "," + (isPlayerRiichi(3) * 1) + "|";
@@ -186,8 +233,20 @@ function getDebugString() {
 	else {
 		debugString += (isPlayerRiichi(0) * 1) + "," + (isPlayerRiichi(1) * 1) + "," + (isPlayerRiichi(2) * 1) + "|";
 	}
+
+	if (!useRaw) {
+		debugString += "seatWind:";
+	}
 	debugString += seatWind + "|";
+
+	if (!useRaw) {
+		debugString += "roundWind:";
+	}
 	debugString += roundWind + "|";
+
+	if (!useRaw) {
+		debugString += "tilesLeft:";
+	}
 	debugString += tilesLeft;
 	return debugString;
 }

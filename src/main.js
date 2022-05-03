@@ -154,6 +154,7 @@ function mainOwnTurn() {
 
 	log("##### OWN TURN #####");
 	log("Debug String: " + getDebugString());
+	log("Current State: " + getDebugString(false));
 	log("Current Danger Level: " + getCurrentDangerLevel());
 
 	determineStrategy(); //Get the Strategy for the current situation. After calls so it does not reset folds
