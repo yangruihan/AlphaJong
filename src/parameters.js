@@ -13,7 +13,7 @@ var CALL_KAN_CONSTANT = 60; //Higher Value: Higher Threshold for calling Kans. D
 //HAND EVALUATION CONSTANTS. Higher number => more important.
 var EFFICIENCY_VALUE = 0.5; // From 0-1. Lower: Slower hands. Higher: Daster hands.
 var SCORE_VALUE = 0.5 // From 0-1. Lower: Cheaper hands. Higher: More expensive hands
-var SAFETY_VALUE = 0.5; // From 0-1. Lower: The bot will not pay much attention to safety. Higher: The bot will try to play safer
+var SAFETY_VALUE = 0.45; // From 0-1. Lower: The bot will not pay much attention to safety. Higher: The bot will try to play safer
 var SAKIGIRI_VALUE = 0.3; // 0 -> Never Sakigiri. Default: 0.3
 
 //STRATEGY CONSTANTS
@@ -23,7 +23,7 @@ var RIICHI_TILES_LEFT = 6; //Minimum amount of tiles that need to be left for ca
 var WAITS_FOR_RIICHI = 5; //Amount of waits that is considered good enough for calling Riichi. Default: 5
 
 //MISC
-var LOG_AMOUNT = 3; //Amount of Messages to log for Tile Priorities
+var LOG_AMOUNT = 6; //Amount of Messages to log for Tile Priorities
 var DEBUG_BUTTON = false; //Display a Debug Button in the GUI
 var LOW_SPEC_MODE = false; //Decrease calculation time
 
