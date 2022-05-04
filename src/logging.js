@@ -158,7 +158,7 @@ function getTileName(tile, useRaw = true) {
 	}
 
 	if (!useRaw && USE_EMOJI) {
-		return getTileEmoji(name);
+		return getTileEmoji(tile.type, tile.index, tile.dora);
 	} else {
 		return name;
 	}

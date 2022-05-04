@@ -3,18 +3,16 @@
 // Contains the yaku calculations
 //################################
 
-const YAKUMAN_SCORE = 10; //Yakuman -> 10?
-
 //Returns the closed and open yaku value of the hand
 function getYaku(inputHand, inputCalls, triplesAndPairs = null) {
 
 	//Remove 4th tile from Kans, which could lead to false yaku calculation
 	inputCalls = inputCalls.filter(tile => !tile.kan);
 
-	let hand = inputHand.concat(inputCalls); //Add calls to hand
+	var hand = inputHand.concat(inputCalls); //Add calls to hand
 
-	let yakuOpen = 0;
-	let yakuClosed = 0;
+	var yakuOpen = 0;
+	var yakuClosed = 0;
 
 
 	// ### 1 Han ###
@@ -29,15 +27,14 @@ function getYaku(inputHand, inputCalls, triplesAndPairs = null) {
 	//Wind/Dragon Triples
 	//Open
 	if (strategy != STRATEGIES.CHIITOITSU) {
-		let yakuhai = getYakuhai(triplesAndPairs.triples);
-		//log(`-- yakuhai open ${yakuhai.open} ${yakuhai.closed}`)
+		var yakuhai = getYakuhai(triplesAndPairs.triples);
 		yakuOpen += yakuhai.open;
 		yakuClosed += yakuhai.closed;
 	}
 
 	//Riichi (Bot has better results without additional value for Riichi)
 	//Closed
-	//let riichi = getRiichi(tenpai);
+	//var riichi = getRiichi(tenpai);
 	//yakuOpen += riichi.open;
 	//yakuClosed += riichi.closed;
 
@@ -108,8 +105,7 @@ function getYaku(inputHand, inputCalls, triplesAndPairs = null) {
 	//Chanta
 	//Half outside Hand (including terminals)
 	//Open/-1 Han after call
-	let chanta = getChanta(triplets, sequences, triplesAndPairs.pairs);
-	//log(`-- chanta open ${chanta.open} ${chanta.closed}`)
+	var chanta = getChanta(triplets, sequences, triplesAndPairs.pairs);
 	yakuOpen += chanta.open;
 	yakuClosed += chanta.closed;
 
@@ -123,8 +119,7 @@ function getYaku(inputHand, inputCalls, triplesAndPairs = null) {
 	//Ittsuu
 	//Pure Straight
 	//Open/-1 Han after call
-	let ittsuu = getIttsuu(sequences);
-	//log(`-- ittsuu open ${ittsuu.open} ${ittsuu.closed}`)
+	var ittsuu = getIttsuu(sequences);
 	yakuOpen += ittsuu.open;
 	yakuClosed += ittsuu.closed;
 
@@ -137,16 +132,14 @@ function getYaku(inputHand, inputCalls, triplesAndPairs = null) {
 	//Junchan
 	//All Terminals
 	//Open/-1 Han after call
-	let junchan = getJunchan(triplets, sequences, triplesAndPairs.pairs);
-	//log(`-- junchan open ${junchan.open} ${junchan.closed}`)
+	var junchan = getJunchan(triplets, sequences, triplesAndPairs.pairs);
 	yakuOpen += junchan.open;
 	yakuClosed += junchan.closed;
 
 	//Honitsu
 	//Half Flush
 	//Open/-1 Han after call
-	let honitsu = getHonitsu(hand);
-	//log(`-- honitsu open ${honitsu.open} ${honitsu.closed}`)
+	var honitsu = getHonitsu(hand);
 	yakuOpen += honitsu.open;
 	yakuClosed += honitsu.closed;
 
@@ -155,8 +148,7 @@ function getYaku(inputHand, inputCalls, triplesAndPairs = null) {
 	//Chinitsu
 	//Full Flush
 	//Open/-1 Han after call
-	let chinitsu = getChinitsu(hand);
-	//log(`-- chinitsu open ${chinitsu.open} ${chinitsu.closed}`)
+	var chinitsu = getChinitsu(hand);
 	yakuOpen += chinitsu.open;
 	yakuClosed += chinitsu.closed;
 
@@ -165,63 +157,37 @@ function getYaku(inputHand, inputCalls, triplesAndPairs = null) {
 	//Daisangen
 	//Big Three Dragons
 	//Open
-	let daisangen = getDaisangen(hand);
-	//log(`-- daisangen open ${daisangen.open} ${daisangen.closed}`)
+	var daisangen = getDaisangen(hand);
 	yakuOpen += daisangen.open;
 	yakuClosed += daisangen.closed;
 
 	//Suuankou
 	//4 Concealed Triplets
 	//Closed
-	let suuankou = getSuuankou(triplets);
-	//log(`-- suuankou open ${suuankou.open} ${suuankou.closed}`)
-	yakuOpen += suuankou.open;
-	yakuOpen += suuankou.closed;
 
 	//Tsuuiisou
 	//All Honours
 	//Open
-	let tsuuiisou = getTsuuiisou(hand, triplets);
-	//log(`-- tsuuiisou open ${tsuuiisou.open} ${tsuuiisou.closed}`)
-	yakuOpen += tsuuiisou.open;
-	yakuClosed += tsuuiisou.closed;
 
 	//Ryuuiisou
 	//All Green
 	//Open
-	let ryuuiisou = getRyuuiisou(hand);
-	//log(`-- ryuuiisou open ${ryuuiisou.open} ${ryuuiisou.closed}`)
-	yakuOpen += ryuuiisou.open;
-	yakuClosed += ryuuiisou.closed;
 
 	//Chinroutou
 	//All Terminals
 	//Open
-	let chinroutou = getChinroutou(hand);
-	//log(`-- chinroutou open ${chinroutou.open} ${chinroutou.closed}`)
-	yakuOpen += chinroutou.open;
-	yakuClosed += chinroutou.closed;
 
 	//Suushiihou
 	//Four Little Winds
 	//Open
-	let suushiihou = getSuushiihou(hand);
-	//log(`-- suushiihou open ${suushiihou.open} ${suushiihou.closed}`)
-	yakuOpen += suushiihou.open;
-	yakuClosed += suushiihou.closed;
 
 	//Suukantsu
 	//4 Kans
 	//Open
-	//-> TODO: Should not influence score, but Kan calling.
 
 	//Chuuren poutou
 	//9 Gates
 	//Closed
-	let chuurenpoutou = getChuurenPoutou(hand, triplets, sequences);
-	//log(`-- chuurenpoutou open ${chuurenpoutou.open} ${chuurenpoutou.closed}`)
-	yakuOpen += chuurenpoutou.open;
-	yakuClosed += chuurenpoutou.closed
 
 	//Kokushi musou
 	//Thirteen Orphans
@@ -279,9 +245,9 @@ function getTanyao(hand, triplesAndPairs, inputCalls) {
 //Iipeikou
 function getIipeikou(triples) {
 	for (let triple of triples) {
-		let tiles1 = getNumberOfTilesInTileArray(triples, triple.index, triple.type);
-		let tiles2 = getNumberOfTilesInTileArray(triples, triple.index + 1, triple.type);
-		let tiles3 = getNumberOfTilesInTileArray(triples, triple.index + 2, triple.type);
+		var tiles1 = getNumberOfTilesInTileArray(triples, triple.index, triple.type);
+		var tiles2 = getNumberOfTilesInTileArray(triples, triple.index + 1, triple.type);
+		var tiles3 = getNumberOfTilesInTileArray(triples, triple.index + 2, triple.type);
 		if (tiles1 == 2 && tiles2 == 2 && tiles3 == 2) {
 			return { open: 0, closed: 1 };
 		}
@@ -290,9 +256,10 @@ function getIipeikou(triples) {
 }
 
 //Sanankou
-function getSanankou(triplets) {
+function getSanankou(hand) {
 	if (!isConsideringCall) {
-		if (parseInt(triplets.length / 3) >= 3) {
+		var concealedTriples = getTripletsAsArray(hand);
+		if (parseInt(concealedTriples.length / 3) >= 3) {
 			return { open: 2, closed: 2 };
 		}
 	}
@@ -311,7 +278,7 @@ function getToitoi(triplets) {
 
 //Sanshoku Douko
 function getSanshokuDouko(triplets) {
-	for (let i = 1; i <= 9; i++) {
+	for (var i = 1; i <= 9; i++) {
 		if (triplets.filter(tile => tile.index == i && tile.type < 3).length >= 9) {
 			return { open: 2, closed: 2 };
 		}
@@ -321,7 +288,7 @@ function getSanshokuDouko(triplets) {
 
 //Sanshoku Doujun
 function getSanshokuDoujun(sequences) {
-	for (let i = 1; i <= 7; i++) {
+	for (var i = 1; i <= 7; i++) {
 		if (sequences.filter(tile => tile.index == i || tile.index == i + 1 || tile.index == i + 2).length >= 9) {
 			return { open: 1, closed: 2 };
 		}
@@ -342,94 +309,11 @@ function getShousangen(hand) {
 
 //Daisangen
 function getDaisangen(hand) {
-	if (hand.filter(tile => tile.type === 3 && tile.index === 5).length >= 3 &&
-		hand.filter(tile => tile.type === 3 && tile.index === 6).length >= 3 &&
-		hand.filter(tile => tile.type === 3 && tile.index === 7).length >= 3) {
-		return { open: YAKUMAN_SCORE, closed: YAKUMAN_SCORE };
+	if (hand.filter(tile => tile.type == 3 && tile.index == 5).length >= 3 &&
+		hand.filter(tile => tile.type == 3 && tile.index == 6).length >= 3 &&
+		hand.filter(tile => tile.type == 3 && tile.index == 7).length >= 3) {
+		return { open: 10, closed: 10 }; //Yakuman -> 10?
 	}
-	return { open: 0, closed: 0 };
-}
-
-//Suuankou
-function getSuuankou(triplets) {
-	if (!isConsideringCall) {
-		if (parseInt(triplets.length / 3) >= 4) {
-			return { open: 0, closed: YAKUMAN_SCORE };
-		}
-	}
-	return { open: 0, closed: 0 };
-}
-
-//Tsuuiisou
-function getTsuuiisou(hand, triplets) {
-	if (hand.filter(tile => tile.type === 3).length >= 13) {
-		if (parseInt(triplets.length / 3) >= 3) {
-			return { open: YAKUMAN_SCORE, closed: YAKUMAN_SCORE };
-		}
-	}
-	return { open: 0, closed: 0 };
-}
-
-//Ryuuiisou
-function getRyuuiisou(hand) {
-	if (hand.filter(tile => 
-		(tile.type == 2 && (tile.index === 2
-						|| tile.index === 3
-						|| tile.index === 4
-						|| tile.index === 6
-						|| tile.index === 8))
-			|| (tile.type === 3 && tile.index === 6)).length === hand.length) {
-		return { open: YAKUMAN_SCORE, closed: YAKUMAN_SCORE };
-	}
-	return { open: 0, closed: 0 };
-}
-
-//Chinroutou
-function getChinroutou(hand) {
-	if (hand.find(tile => tile.type === 3 || (tile.index != 1 && tile.index != 9))) {
-		return { open: 0, closed: 0 };
-	} else {
-		return { open: YAKUMAN_SCORE, closed: YAKUMAN_SCORE };
-	}
-}
-
-//Suushiihou
-function getSuushiihou(hand) {
-	if (hand.filter(tile => tile.type === 3 && tile.index <= 4).length == 11) {
-		return { open: YAKUMAN_SCORE, closed: YAKUMAN_SCORE };
-	}
-	return { open: 0, closed: 0 };
-}
-
-//ChuurenPoutou
-function getChuurenPoutou(hand, triplets, sequences) {
-	if (hand.find(tile => tile.type != hand[0].type)) {
-		return { open: 0, closed: 0 };
-	}
-
-	let crtIdx = 1;
-	let red_five = false;
-
-	if (hand[0].index === 0) {
-		red_five = true;
-	}
-
-	for (let idx = red_five ? 1 : 0; idx < hand.length; idx++) {
-		if (hand[idx].index === crtIdx + 1) {
-			crtIdx++;
-		} else if (hand[idx].index === 6 && crtIdx === 4 && red_five) { // red five?
-			crtIdx = 6;
-		}
-	}
-
-	if (crtIdx != 9) {
-		return { open: 0, closed: 0 };
-	}
-
-	if (parseInt(triplets.length / 3) === 1 && parseInt(sequences.length / 3) === 3) {
-		return { open: YAKUMAN_SCORE, closed: YAKUMAN_SCORE };
-	}
-
 	return { open: 0, closed: 0 };
 }
 
@@ -459,10 +343,10 @@ function getJunchan(triplets, sequences, pairs) {
 }
 
 //Ittsuu
-function getIttsuu(sequences) {
-	for (let j = 0; j <= 2; j++) {
-		for (let i = 1; i <= 9; i++) {
-			if (!sequences.some(tile => tile.type == j && tile.index == i)) {
+function getIttsuu(triples) {
+	for (var j = 0; j <= 2; j++) {
+		for (var i = 1; i <= 9; i++) {
+			if (!triples.some(tile => tile.type == j && tile.index == i)) {
 				break;
 			}
 			if (i == 9) {

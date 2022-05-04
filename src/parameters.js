@@ -73,6 +73,13 @@ var viewInjected = false;
 var crtSelectTile = null;
 var handTilesdValue = [];
 
+// Display
+var tileEmojiList = [
+	["red🀝" ,"🀙" ,"🀚" ,"🀛" ,"🀜" ,"🀝" ,"🀞" ,"🀟" ,"🀠" ,"🀡"],
+	["red🀋" ,"🀇" ,"🀈" ,"🀉" ,"🀊" ,"🀋" ,"🀌" ,"🀍" ,"🀎" ,"🀏"],
+	["red🀔" ,"🀐" ,"🀑" ,"🀒" ,"🀓" ,"🀔" ,"🀕" ,"🀖" ,"🀗" ,"🀘"],
+	["", "🀀" ,"🀁" ,"🀂" ,"🀃" ,"🀆" ,"🀅" ,"🀄"]];
+
 //LOCAL STORAGE
 var AUTORUN = window.localStorage.getItem("alphajongAutorun") == "true";
 var ROOM = window.localStorage.getItem("alphajongRoom");
