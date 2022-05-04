@@ -31,7 +31,7 @@ var SAKIGIRI_VALUE = 0.3; // 0 -> Never Sakigiri. Default: 0.3
 
 //STRATEGY CONSTANTS
 var CHIITOITSU = 5; //Number of Pairs in Hand to go for chiitoitsu. Default: 5
-var THIRTEEN_ORPHANS = 10; //Number of Honor/Terminals in hand to go for 13 orphans (Not yet implemented). Default: 10
+var THIRTEEN_ORPHANS = 10; //Number of Honor/Terminals in hand to go for 13 orphans. Default: 10
 var RIICHI_TILES_LEFT = 6; //Minimum amount of tiles that need to be left for calling Riichi. Default: 6
 var WAITS_FOR_RIICHI = 5; //Amount of waits that is considered good enough for calling Riichi. Default: 5
 
@@ -85,6 +85,13 @@ var playerDiscardSafetyList = [[], [], [], []];
 var viewInjected = false;
 var crtSelectTile = null;
 var handTilesdValue = [];
+
+// Display
+var tileEmojiList = [
+	["red🀝" ,"🀙" ,"🀚" ,"🀛" ,"🀜" ,"🀝" ,"🀞" ,"🀟" ,"🀠" ,"🀡"],
+	["red🀋" ,"🀇" ,"🀈" ,"🀉" ,"🀊" ,"🀋" ,"🀌" ,"🀍" ,"🀎" ,"🀏"],
+	["red🀔" ,"🀐" ,"🀑" ,"🀒" ,"🀓" ,"🀔" ,"🀕" ,"🀖" ,"🀗" ,"🀘"],
+	["", "🀀" ,"🀁" ,"🀂" ,"🀃" ,"🀆" ,"🀅" ,"🀄"]];
 
 //LOCAL STORAGE
 var AUTORUN = window.localStorage.getItem("alphajongAutorun") == "true";
@@ -469,7 +476,7 @@ function sendRiichiCall(tile, moqie) {
 	if (MODE === AIMODE.AUTO) {
 		app.NetAgent.sendReq2MJ('FastTest', 'inputOperation', { type: mjcore.E_PlayOperation.liqi, tile: tile, moqie: moqie, timeuse: Math.random() * 2 + 1 }); //Moqie: Throwing last drawn tile (Riichi -> false)
 	} else {
-		let tileName = getTileEmoji(tile);
+		let tileName = getTileEmojiByName(tile);
 		showCrtStrategyMsg(`riichi ${tileName};`);
 	}
 }
@@ -1388,6 +1395,11 @@ function shouldRiichi(waits, yaku, handDora) {
 		return false;
 	}
 
+	if (tilesLeft <= RIICHI_TILES_LEFT) {
+		log("Decline Riichi because close to end of game.");
+		return false;
+	}
+
 	//No waits
 	if (waits < 1) {
 		log("Decline Riichi because of no waits.");
@@ -1516,53 +1528,17 @@ function getCallNameByType(type) {
 	}
 }
 
-//Get Emoji str by tile name
-function getTileEmoji(name) {
-	switch (name) {
-		case "0m": return "red🀋";
-		case "1m": return "🀇";
-		case "2m": return "🀈";
-		case "3m": return "🀉";
-		case "4m": return "🀊";
-		case "5m": return "🀋";
-		case "6m": return "🀌";
-		case "7m": return "🀍";
-		case "8m": return "🀎";
-		case "9m": return "🀏";
-
-		case "0s": return "red🀔";
-		case "1s": return "🀐";
-		case "2s": return "🀑";
-		case "3s": return "🀒";
-		case "4s": return "🀓";
-		case "5s": return "🀔";
-		case "6s": return "🀕";
-		case "7s": return "🀖";
-		case "8s": return "🀗";
-		case "9s": return "🀘";
-
-		case "0p": return "red🀝";
-		case "1p": return "🀙";
-		case "2p": return "🀚";
-		case "3p": return "🀛";
-		case "4p": return "🀜";
-		case "5p": return "🀝";
-		case "6p": return "🀞";
-		case "7p": return "🀟";
-		case "8p": return "🀠";
-		case "9p": return "🀡";
-
-		case "1z": return "🀀";
-		case "2z": return "🀁";
-		case "3z": return "🀂";
-		case "4z": return "🀃";
-		case "5z": return "🀆";
-		case "6z": return "🀅";
-		case "7z": return "🀄";
-
-		default:
-			return name;
+function getTileEmoji(tileType, tileIdx, dora) {
+	if (dora) {
+		tileIdx = 0;
 	}
+	return tileEmojiList[tileType][tileIdx];
+}
+
+//Get Emoji str by tile name
+function getTileEmojiByName(name) {
+	let tile = getTileFromString(name);
+	return getTileEmoji(tile.type, tile.index, tile.dora);
 }
 
 //################################
@@ -1725,7 +1701,7 @@ function getTileName(tile, useRaw = true) {
 	}
 
 	if (!useRaw && USE_EMOJI) {
-		return getTileEmoji(name);
+		return getTileEmoji(tile.type, tile.index, tile.dora);
 	} else {
 		return name;
 	}
@@ -1827,18 +1803,16 @@ function getDebugString(useRaw = true) {
 // Contains the yaku calculations
 //################################
 
-const YAKUMAN_SCORE = 10; //Yakuman -> 10?
-
 //Returns the closed and open yaku value of the hand
 function getYaku(inputHand, inputCalls, triplesAndPairs = null) {
 
 	//Remove 4th tile from Kans, which could lead to false yaku calculation
 	inputCalls = inputCalls.filter(tile => !tile.kan);
 
-	let hand = inputHand.concat(inputCalls); //Add calls to hand
+	var hand = inputHand.concat(inputCalls); //Add calls to hand
 
-	let yakuOpen = 0;
-	let yakuClosed = 0;
+	var yakuOpen = 0;
+	var yakuClosed = 0;
 
 
 	// ### 1 Han ###
@@ -1853,22 +1827,20 @@ function getYaku(inputHand, inputCalls, triplesAndPairs = null) {
 	//Wind/Dragon Triples
 	//Open
 	if (strategy != STRATEGIES.CHIITOITSU) {
-		let yakuhai = getYakuhai(triplesAndPairs.triples);
-		//log(`-- yakuhai open ${yakuhai.open} ${yakuhai.closed}`)
+		var yakuhai = getYakuhai(triplesAndPairs.triples);
 		yakuOpen += yakuhai.open;
 		yakuClosed += yakuhai.closed;
 	}
 
 	//Riichi (Bot has better results without additional value for Riichi)
 	//Closed
-	//let riichi = getRiichi(tenpai);
+	//var riichi = getRiichi(tenpai);
 	//yakuOpen += riichi.open;
 	//yakuClosed += riichi.closed;
 
 	//Tanyao
 	//Open
-	let tanyao = getTanyao(hand, inputCalls);
-	//log(`-- tanyao open ${tanyao.open} ${tanyao.closed}`)
+	var tanyao = getTanyao(hand, triplesAndPairs, inputCalls);
 	yakuOpen += tanyao.open;
 	yakuClosed += tanyao.closed;
 
@@ -1933,8 +1905,7 @@ function getYaku(inputHand, inputCalls, triplesAndPairs = null) {
 	//Chanta
 	//Half outside Hand (including terminals)
 	//Open/-1 Han after call
-	let chanta = getChanta(triplets, sequences, triplesAndPairs.pairs);
-	//log(`-- chanta open ${chanta.open} ${chanta.closed}`)
+	var chanta = getChanta(triplets, sequences, triplesAndPairs.pairs);
 	yakuOpen += chanta.open;
 	yakuClosed += chanta.closed;
 
@@ -1948,8 +1919,7 @@ function getYaku(inputHand, inputCalls, triplesAndPairs = null) {
 	//Ittsuu
 	//Pure Straight
 	//Open/-1 Han after call
-	let ittsuu = getIttsuu(sequences);
-	//log(`-- ittsuu open ${ittsuu.open} ${ittsuu.closed}`)
+	var ittsuu = getIttsuu(sequences);
 	yakuOpen += ittsuu.open;
 	yakuClosed += ittsuu.closed;
 
@@ -1962,16 +1932,14 @@ function getYaku(inputHand, inputCalls, triplesAndPairs = null) {
 	//Junchan
 	//All Terminals
 	//Open/-1 Han after call
-	let junchan = getJunchan(triplets, sequences, triplesAndPairs.pairs);
-	//log(`-- junchan open ${junchan.open} ${junchan.closed}`)
+	var junchan = getJunchan(triplets, sequences, triplesAndPairs.pairs);
 	yakuOpen += junchan.open;
 	yakuClosed += junchan.closed;
 
 	//Honitsu
 	//Half Flush
 	//Open/-1 Han after call
-	let honitsu = getHonitsu(hand);
-	//log(`-- honitsu open ${honitsu.open} ${honitsu.closed}`)
+	var honitsu = getHonitsu(hand);
 	yakuOpen += honitsu.open;
 	yakuClosed += honitsu.closed;
 
@@ -1980,8 +1948,7 @@ function getYaku(inputHand, inputCalls, triplesAndPairs = null) {
 	//Chinitsu
 	//Full Flush
 	//Open/-1 Han after call
-	let chinitsu = getChinitsu(hand);
-	//log(`-- chinitsu open ${chinitsu.open} ${chinitsu.closed}`)
+	var chinitsu = getChinitsu(hand);
 	yakuOpen += chinitsu.open;
 	yakuClosed += chinitsu.closed;
 
@@ -1990,63 +1957,37 @@ function getYaku(inputHand, inputCalls, triplesAndPairs = null) {
 	//Daisangen
 	//Big Three Dragons
 	//Open
-	let daisangen = getDaisangen(hand);
-	//log(`-- daisangen open ${daisangen.open} ${daisangen.closed}`)
+	var daisangen = getDaisangen(hand);
 	yakuOpen += daisangen.open;
 	yakuClosed += daisangen.closed;
 
 	//Suuankou
 	//4 Concealed Triplets
 	//Closed
-	let suuankou = getSuuankou(triplets);
-	//log(`-- suuankou open ${suuankou.open} ${suuankou.closed}`)
-	yakuOpen += suuankou.open;
-	yakuOpen += suuankou.closed;
 
 	//Tsuuiisou
 	//All Honours
 	//Open
-	let tsuuiisou = getTsuuiisou(hand, triplets);
-	//log(`-- tsuuiisou open ${tsuuiisou.open} ${tsuuiisou.closed}`)
-	yakuOpen += tsuuiisou.open;
-	yakuClosed += tsuuiisou.closed;
 
 	//Ryuuiisou
 	//All Green
 	//Open
-	let ryuuiisou = getRyuuiisou(hand);
-	//log(`-- ryuuiisou open ${ryuuiisou.open} ${ryuuiisou.closed}`)
-	yakuOpen += ryuuiisou.open;
-	yakuClosed += ryuuiisou.closed;
 
 	//Chinroutou
 	//All Terminals
 	//Open
-	let chinroutou = getChinroutou(hand);
-	//log(`-- chinroutou open ${chinroutou.open} ${chinroutou.closed}`)
-	yakuOpen += chinroutou.open;
-	yakuClosed += chinroutou.closed;
 
 	//Suushiihou
 	//Four Little Winds
 	//Open
-	let suushiihou = getSuushiihou(hand);
-	//log(`-- suushiihou open ${suushiihou.open} ${suushiihou.closed}`)
-	yakuOpen += suushiihou.open;
-	yakuClosed += suushiihou.closed;
 
 	//Suukantsu
 	//4 Kans
 	//Open
-	//-> TODO: Should not influence score, but Kan calling.
 
 	//Chuuren poutou
 	//9 Gates
 	//Closed
-	let chuurenpoutou = getChuurenPoutou(hand, triplets, sequences);
-	//log(`-- chuurenpoutou open ${chuurenpoutou.open} ${chuurenpoutou.closed}`)
-	yakuOpen += chuurenpoutou.open;
-	yakuClosed += chuurenpoutou.closed
 
 	//Kokushi musou
 	//Thirteen Orphans
@@ -2091,9 +2032,11 @@ function getRiichi(tenpai) {
 }
 
 //Tanyao
-function getTanyao(hand, inputCalls) {
+function getTanyao(hand, triplesAndPairs, inputCalls) {
 	if (hand.filter(tile => tile.type != 3 && tile.index > 1 && tile.index < 9).length >= 13 &&
-		inputCalls.filter(tile => tile.type == 3 || tile.index == 1 || tile.index == 9).length == 0) {
+		inputCalls.filter(tile => tile.type == 3 || tile.index == 1 || tile.index == 9).length == 0 &&
+		triplesAndPairs.pairs.filter(tile => tile.type == 3 || tile.index == 1 || tile.index == 9).length == 0 &&
+		triplesAndPairs.triples.filter(tile => tile.type == 3 || tile.index == 1 || tile.index == 9).length == 0) {
 		return { open: 1, closed: 1 };
 	}
 	return { open: 0, closed: 0 };
@@ -2102,9 +2045,9 @@ function getTanyao(hand, inputCalls) {
 //Iipeikou
 function getIipeikou(triples) {
 	for (let triple of triples) {
-		let tiles1 = getNumberOfTilesInTileArray(triples, triple.index, triple.type);
-		let tiles2 = getNumberOfTilesInTileArray(triples, triple.index + 1, triple.type);
-		let tiles3 = getNumberOfTilesInTileArray(triples, triple.index + 2, triple.type);
+		var tiles1 = getNumberOfTilesInTileArray(triples, triple.index, triple.type);
+		var tiles2 = getNumberOfTilesInTileArray(triples, triple.index + 1, triple.type);
+		var tiles3 = getNumberOfTilesInTileArray(triples, triple.index + 2, triple.type);
 		if (tiles1 == 2 && tiles2 == 2 && tiles3 == 2) {
 			return { open: 0, closed: 1 };
 		}
@@ -2113,9 +2056,10 @@ function getIipeikou(triples) {
 }
 
 //Sanankou
-function getSanankou(triplets) {
+function getSanankou(hand) {
 	if (!isConsideringCall) {
-		if (parseInt(triplets.length / 3) >= 3) {
+		var concealedTriples = getTripletsAsArray(hand);
+		if (parseInt(concealedTriples.length / 3) >= 3) {
 			return { open: 2, closed: 2 };
 		}
 	}
@@ -2134,7 +2078,7 @@ function getToitoi(triplets) {
 
 //Sanshoku Douko
 function getSanshokuDouko(triplets) {
-	for (let i = 1; i <= 9; i++) {
+	for (var i = 1; i <= 9; i++) {
 		if (triplets.filter(tile => tile.index == i && tile.type < 3).length >= 9) {
 			return { open: 2, closed: 2 };
 		}
@@ -2144,7 +2088,7 @@ function getSanshokuDouko(triplets) {
 
 //Sanshoku Doujun
 function getSanshokuDoujun(sequences) {
-	for (let i = 1; i <= 7; i++) {
+	for (var i = 1; i <= 7; i++) {
 		if (sequences.filter(tile => tile.index == i || tile.index == i + 1 || tile.index == i + 2).length >= 9) {
 			return { open: 1, closed: 2 };
 		}
@@ -2165,94 +2109,11 @@ function getShousangen(hand) {
 
 //Daisangen
 function getDaisangen(hand) {
-	if (hand.filter(tile => tile.type === 3 && tile.index === 5).length >= 3 &&
-		hand.filter(tile => tile.type === 3 && tile.index === 6).length >= 3 &&
-		hand.filter(tile => tile.type === 3 && tile.index === 7).length >= 3) {
-		return { open: YAKUMAN_SCORE, closed: YAKUMAN_SCORE };
+	if (hand.filter(tile => tile.type == 3 && tile.index == 5).length >= 3 &&
+		hand.filter(tile => tile.type == 3 && tile.index == 6).length >= 3 &&
+		hand.filter(tile => tile.type == 3 && tile.index == 7).length >= 3) {
+		return { open: 10, closed: 10 }; //Yakuman -> 10?
 	}
-	return { open: 0, closed: 0 };
-}
-
-//Suuankou
-function getSuuankou(triplets) {
-	if (!isConsideringCall) {
-		if (parseInt(triplets.length / 3) >= 4) {
-			return { open: 0, closed: YAKUMAN_SCORE };
-		}
-	}
-	return { open: 0, closed: 0 };
-}
-
-//Tsuuiisou
-function getTsuuiisou(hand, triplets) {
-	if (hand.filter(tile => tile.type === 3).length >= 13) {
-		if (parseInt(triplets.length / 3) >= 3) {
-			return { open: YAKUMAN_SCORE, closed: YAKUMAN_SCORE };
-		}
-	}
-	return { open: 0, closed: 0 };
-}
-
-//Ryuuiisou
-function getRyuuiisou(hand) {
-	if (hand.filter(tile => 
-		(tile.type == 2 && (tile.index === 2
-						|| tile.index === 3
-						|| tile.index === 4
-						|| tile.index === 6
-						|| tile.index === 8))
-			|| (tile.type === 3 && tile.index === 6)).length === hand.length) {
-		return { open: YAKUMAN_SCORE, closed: YAKUMAN_SCORE };
-	}
-	return { open: 0, closed: 0 };
-}
-
-//Chinroutou
-function getChinroutou(hand) {
-	if (hand.find(tile => tile.type === 3 || (tile.index != 1 && tile.index != 9))) {
-		return { open: 0, closed: 0 };
-	} else {
-		return { open: YAKUMAN_SCORE, closed: YAKUMAN_SCORE };
-	}
-}
-
-//Suushiihou
-function getSuushiihou(hand) {
-	if (hand.filter(tile => tile.type === 3 && tile.index <= 4).length == 11) {
-		return { open: YAKUMAN_SCORE, closed: YAKUMAN_SCORE };
-	}
-	return { open: 0, closed: 0 };
-}
-
-//ChuurenPoutou
-function getChuurenPoutou(hand, triplets, sequences) {
-	if (hand.find(tile => tile.type != hand[0].type)) {
-		return { open: 0, closed: 0 };
-	}
-
-	let crtIdx = 1;
-	let red_five = false;
-
-	if (hand[0].index === 0) {
-		red_five = true;
-	}
-
-	for (let idx = red_five ? 1 : 0; idx < hand.length; idx++) {
-		if (hand[idx].index === crtIdx + 1) {
-			crtIdx++;
-		} else if (hand[idx].index === 6 && crtIdx === 4 && red_five) { // red five?
-			crtIdx = 6;
-		}
-	}
-
-	if (crtIdx != 9) {
-		return { open: 0, closed: 0 };
-	}
-
-	if (parseInt(triplets.length / 3) === 1 && parseInt(sequences.length / 3) === 3) {
-		return { open: YAKUMAN_SCORE, closed: YAKUMAN_SCORE };
-	}
-
 	return { open: 0, closed: 0 };
 }
 
@@ -2282,10 +2143,10 @@ function getJunchan(triplets, sequences, pairs) {
 }
 
 //Ittsuu
-function getIttsuu(sequences) {
-	for (let j = 0; j <= 2; j++) {
-		for (let i = 1; i <= 9; i++) {
-			if (!sequences.some(tile => tile.type == j && tile.index == i)) {
+function getIttsuu(triples) {
+	for (var j = 0; j <= 2; j++) {
+		for (var i = 1; i <= 9; i++) {
+			if (!triples.some(tile => tile.type == j && tile.index == i)) {
 				break;
 			}
 			if (i == 9) {
@@ -2325,7 +2186,8 @@ function determineStrategy() {
 		var handTriples = parseInt(getTriples(getHandWithCalls(ownHand)).length / 3);
 		var pairs = getPairsAsArray(ownHand).length / 2;
 
-		if ((pairs == 6 || (pairs >= CHIITOITSU && handTriples < 2)) && isClosed) { //Check for Chiitoitsu
+		if ((pairs == 6 || (pairs >= CHIITOITSU && handTriples < 2) ||
+			(pairs >= CHIITOITSU - 1 && handTriples == 0)) && isClosed) {
 			strategy = STRATEGIES.CHIITOITSU;
 			strategyAllowsCalls = false;
 		}
@@ -2408,8 +2270,8 @@ function callTriple(combinations, operation) {
 		return false;
 	}
 
-	if (newHandValue.yaku.open < 0.01) { //Yaku chance is too bad
-		log("Not enough Yaku! Declined! " + newHandValue.yaku.open + "<0.01");
+	if (newHandValue.yaku.open < 0.1) { //Yaku chance is too bad
+		log("Not enough Yaku! Declined! " + newHandValue.yaku.open + "<0.1");
 		declineCall(operation);
 		return false;
 	}
@@ -2426,31 +2288,31 @@ function callTriple(combinations, operation) {
 		return false;
 	}
 
-	if (handValue.waits > 1 && newHandValue.waits < handValue.waits + 1) { //Call results in worse waits
+	if (handValue.waits > 1 && newHandValue.waits < handValue.waits + 1) { //Call results in worse waits 
 		log("Call would result in less waits! Declined!");
 		declineCall(operation);
 		return false;
 	}
 
-	if (isClosed && newHandValue.yaku.open + newHandValue.dora < 2 && newHandValue.efficiency < 3.5 && seatWind != 1) { // Hand is worthless and slow and not dealer. Should prevent cheap yakuhai or tanyao calls
+	if (isClosed && newHandValue.score.open < 1500 && newHandValue.shanten >= 3 && seatWind != 1) { // Hand is worthless and slow and not dealer. Should prevent cheap yakuhai or tanyao calls
 		log("Hand is cheap and slow! Declined!");
 		declineCall(operation);
 		return false;
 	}
 
-	if (handValue.efficiency < 1.5 && seatWind == 1) { //Low hand efficiency & dealer? -> Go for a fast win
+	if (handValue.shanten >= 4 && seatWind == 1) { //Very slow hand & dealer? -> Go for a fast win
 		log("Call accepted because of bad hand and dealer position!");
 	}
-	else if (newHandValue.yaku.open + getNumberOfDoras(ownHand) >= CALL_CONSTANT && handValue.yaku.open + handValue.dora > newHandValue.yaku.open + newHandValue.dora * 0.7) { //High value hand? -> Go for a fast win
-		log("Call accepted because of high value hand!");
-	}
-	else if (getTileDoraValue(getTileForCall()) + newHandValue.yaku.open >= handValue.yaku.closed + 0.9) { //Call gives additional value to hand
-		log("Call accepted because it boosts the value of the hand!");
-	}
-	else if (!isClosed && (newHandValue.yaku.open + newHandValue.dora) >= (handValue.yaku.open + handValue.dora) * 0.9) { //Hand is already open and not much value is lost
+	else if (!isClosed && newHandValue.score.open > handValue.score.open * 0.9) { //Hand is already open and not much value is lost
 		log("Call accepted because hand is already open!");
 	}
-	else if (newHandValue.efficiency >= 3.5 && (newHandValue.yaku.open + newHandValue.dora) >= (handValue.yaku.open + handValue.dora) * 0.9 && newHandValue.waits > 2 && // Make hand ready and eliminate a bad wait
+	else if (newHandValue.score.open >= 4000 && newHandValue.score.open > handValue.score.closed * 0.7) { //High value hand? -> Go for a fast win
+		log("Call accepted because of high value hand!");
+	}
+	else if (newHandValue.score.open >= handValue.score.closed * 1.25) { //Call gives additional value to hand
+		log("Call accepted because it boosts the value of the hand!");
+	}
+	else if (newHandValue.shanten == 0 && newHandValue.score.open > handValue.score.closed * 0.9 && newHandValue.waits > 2 && // Make hand ready and eliminate a bad wait
 		(newTriple[0].index == newTriple[1].index || Math.abs(newTriple[0].index - newTriple[1].index) == 2 || // Pon or Kanchan
 			newTriple[0].index >= 8 && newTriple[1].index >= 8 || newTriple[0].index <= 2 && newTriple[1].index <= 2)) { //Penchan
 		log("Call accepted because it eliminates a bad wait and makes the hand ready!");
@@ -2532,7 +2394,7 @@ function callAbortiveDraw() { // Kyuushu Kyuuhai, 9 Honors or Terminals in start
 		return;
 	}
 	var handValue = getHandValues(ownHand);
-	if (handValue.priority < 1.2) { //Hand is bad -> abort game
+	if (handValue.shanten >= 4) { //Hand is bad -> abort game
 		sendAbortiveDrawCall();
 	}
 }
@@ -2579,7 +2441,7 @@ function discardFold(tiles) {
 	if (strategy != STRATEGIES.FOLD) { //Not in full Fold mode yet: Discard a relatively safe tile with high priority
 		for (let tile of tiles) {
 			var foldThreshold = getFoldThreshold(tile, ownHand);
-			if (tile.priority + 0.1 > tiles[0].priority) { //If next tile is not much worse in priority than the top priority discard
+			if (tile.priority * 1.1 > tiles[0].priority) { //If next tile is not much worse in priority than the top priority discard
 				if (tile.safety > foldThreshold) { //Tile that is safe enough exists
 					log("Tile Priorities: ");
 					printTilePriority(tiles);
@@ -2595,6 +2457,7 @@ function discardFold(tiles) {
 	}
 
 	tiles.sort(function (p1, p2) {
+		// TODO: need twice sort by priority
 		return p2.safety - p1.safety;
 	});
 	log("Fold Tile Priorities: ");
@@ -2652,7 +2515,8 @@ function getTilePriorities(inputHand) {
 	return tiles;
 }
 
-/*Calculates Values for all tiles in the hand.
+/*
+Calculates Values for all tiles in the hand.
 As the Core of the AI this function is really complex. The simple explanation:
 It simulates the next two turns, calculates all the important stuff (shanten, dora, yaku, waits etc.) and produces a priority for each tile based on the expected value/shanten in two turns.
 
@@ -2824,7 +2688,6 @@ function getHandValues(hand, discardedTile) {
 		var thisYaku = getYaku(hand, calls[0], triplesAndPairs2);
 
 		if (tileCombination.winning && !tile1Furiten) { //For winning tiles: Add waits, fu and the Riichi value (value only for drawing winning tiles)
-			riichiValue += (thisYaku.closed + thisDora + 1 + 0.2 + getUradoraChance()) * factor;
 			if (isClosed || thisYaku.open >= 1) {
 				var thisWait = numberOfTiles1 * getWaitQuality(tile1);
 				waits += thisWait;
@@ -2833,6 +2696,7 @@ function getHandValues(hand, discardedTile) {
 				if (thisFu == 30 && isClosed) {
 					thisYaku.closed += 1;
 				}
+				riichiValue += (thisYaku.closed + thisDora + 1 + 0.2 + getUradoraChance()) * factor;
 				numberOfTotalWaitCombinations += factor;
 			}
 		}
@@ -2899,23 +2763,23 @@ function getHandValues(hand, discardedTile) {
 						newWait += numberOfTiles1 * getWaitQuality(tile1) * ((numberOfTiles2) / availableTiles.length);
 					}
 					waits += newWait;
-					var secondDiscard = removeTilesFromTileArray(hand, triples3.concat(pairs3))[0];
+				}
 
-					if (!tile2Data.duplicate) {
-						var newFu = calculateFu(triples3, calls[0], pairs3, removeTilesFromTileArray(hand, triples.concat(pairs).concat(tile2).concat(secondDiscard)), tile2);
-						if (newFu == 30 && isClosed) {
-							thisYaku.closed += 1;
-						}
+				var secondDiscard = removeTilesFromTileArray(hand, triples3.concat(pairs3))[0];
+				if (!tile2Data.duplicate) {
+					var newFu = calculateFu(triples3, calls[0], pairs3, removeTilesFromTileArray(hand, triples.concat(pairs).concat(tile2).concat(secondDiscard)), tile2);
+					if (newFu == 30 && isClosed) {
+						thisYaku.closed += 1;
 					}
-					else { //Calculate Fu for drawing both tiles in different orders
-						var newFu = calculateFu(triples3, calls[0], pairs3, removeTilesFromTileArray(hand, triples.concat(pairs).concat(tile2).concat(secondDiscard)), tile2);
-						var newFu2 = calculateFu(triples3, calls[0], pairs3, removeTilesFromTileArray(hand, triples.concat(pairs).concat(tile1).concat(secondDiscard)), tile1);
-						if (newFu == 30 && isClosed) {
-							thisYaku.closed += 0.5;
-						}
-						if (newFu2 == 30 && isClosed) {
-							thisYaku.closed += 0.5;
-						}
+				}
+				else { //Calculate Fu for drawing both tiles in different orders
+					var newFu = calculateFu(triples3, calls[0], pairs3, removeTilesFromTileArray(hand, triples.concat(pairs).concat(tile2).concat(secondDiscard)), tile2);
+					var newFu2 = calculateFu(triples3, calls[0], pairs3, removeTilesFromTileArray(hand, triples.concat(pairs).concat(tile1).concat(secondDiscard)), tile1);
+					if (newFu == 30 && isClosed) {
+						thisYaku.closed += 0.5;
+					}
+					if (newFu2 == 30 && isClosed) {
+						thisYaku.closed += 0.5;
 					}
 				}
 			}
@@ -3200,7 +3064,7 @@ function discard() {
 
 	var tile = getDiscardTile(tiles);
 
-	if (canRiichi() && tilesLeft > RIICHI_TILES_LEFT) {
+	if (canRiichi()) {
 		callRiichi(tiles);
 	}
 	else {
@@ -3235,6 +3099,7 @@ function getDiscardTile(tiles) {
 	}
 	return tile;
 }
+
 //################################
 // AI DEFENSE
 // Defensive part of the AI
@@ -3886,6 +3751,8 @@ function main() {
 		return;
 	}
 
+	showCrtActionMsg("Calculating best move...");
+
 	setTimeout(mainOwnTurn, 500 + (Math.random() * 500));
 }
 
@@ -3915,8 +3782,6 @@ function checkPlayerOpChanged() {
 }
 
 function mainOwnTurn() {
-	showCrtActionMsg("Calculating best move...");
-
 	//HELP MODE, if player not operate, just skip
 	if (MODE === AIMODE.HELP) {
 		if (!checkPlayerOpChanged()) {
