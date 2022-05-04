@@ -43,8 +43,7 @@ function getYaku(inputHand, inputCalls, triplesAndPairs = null) {
 
 	//Tanyao
 	//Open
-	let tanyao = getTanyao(hand, inputCalls);
-	//log(`-- tanyao open ${tanyao.open} ${tanyao.closed}`)
+	var tanyao = getTanyao(hand, triplesAndPairs, inputCalls);
 	yakuOpen += tanyao.open;
 	yakuClosed += tanyao.closed;
 
@@ -267,9 +266,11 @@ function getRiichi(tenpai) {
 }
 
 //Tanyao
-function getTanyao(hand, inputCalls) {
+function getTanyao(hand, triplesAndPairs, inputCalls) {
 	if (hand.filter(tile => tile.type != 3 && tile.index > 1 && tile.index < 9).length >= 13 &&
-		inputCalls.filter(tile => tile.type == 3 || tile.index == 1 || tile.index == 9).length == 0) {
+		inputCalls.filter(tile => tile.type == 3 || tile.index == 1 || tile.index == 9).length == 0 &&
+		triplesAndPairs.pairs.filter(tile => tile.type == 3 || tile.index == 1 || tile.index == 9).length == 0 &&
+		triplesAndPairs.triples.filter(tile => tile.type == 3 || tile.index == 1 || tile.index == 9).length == 0) {
 		return { open: 1, closed: 1 };
 	}
 	return { open: 0, closed: 0 };
