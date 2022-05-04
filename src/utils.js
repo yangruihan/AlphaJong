@@ -898,4 +898,3 @@ function getTileEmojiByName(name) {
 	let tile = getTileFromString(name);
 	return getTileEmoji(tile.type, tile.index, tile.dora);
 }
-}
