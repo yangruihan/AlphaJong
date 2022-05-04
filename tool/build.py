@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+#-*- coding:utf-8 -*-
 
 import os
 
@@ -39,12 +40,12 @@ header = f"""// ==UserScript==
 def main():
     ret = [header]
     for file in src_files:
-        with open(os.path.join(src_dir, file), 'r') as f:
+        with open(os.path.join(src_dir, file), "r", encoding="utf-8") as f:
             ret.append(f.read())
 
     output = "\n".join(ret)
     output_name = os.path.join(build_dir, f"AlphaJong_{version}.user.js")
-    with open(output_name, "w") as f:
+    with open(output_name, "w", encoding="utf-8") as f:
         f.write(output)
 
     print(f'build finish >> {output_name}')
