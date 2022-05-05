@@ -3950,20 +3950,23 @@ function injectView() {
 	view.DesktopMgr.prototype.setChoosedPai = (e, ...rest) => {
 		const r = m.call(view.DesktopMgr.Inst, e, ...rest); // render normally
 
-		if (crtSelectTile != null && e == null) {
-			showCrtChoosedTileInfo("");
-		}
-
-		if (handTilesdValue.length > 0 && e != null && e != crtSelectTile) {
-			let tileItem = handTilesdValue.find(i => i.tile.index === e.index && i.tile.type === e.type && i.tile.dora === e.dora);
-			if (tileItem != 'undefined') {
-				showCrtChoosedTileInfo(getTilePriorityString(tileItem));
+		try {
+			if (crtSelectTile != null && e == null) {
+				showCrtChoosedTileInfo("");
 			}
+	
+			if (handTilesdValue.length > 0 && e != null && e != crtSelectTile) {
+				let tileItem = handTilesdValue.find(i => i.tile.index === e.index && i.tile.type === e.type && i.tile.dora === e.dora);
+				if (tileItem != 'undefined') {
+					showCrtChoosedTileInfo(getTilePriorityString(tileItem));
+				}
+			}
+	
+			crtSelectTile = e;
+		} catch (error) {
+			console.error(error);
 		}
-
-		crtSelectTile = e;
 
 		return r;
 	}
 }
-
