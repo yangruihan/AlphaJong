@@ -317,7 +317,7 @@ function hasFinishedMainLobbyLoading() {
 	if (typeof GameMgr == 'undefined') {
 		return false;
 	}
-	return GameMgr.Inst.login_loading_end;
+	return GameMgr.Inst.login_loading_end || isInGame();
 }
 
 function searchForGame() {
@@ -895,7 +895,7 @@ function sortTiles(inputTiles) {
 
 //Return number of specific tiles available
 function getNumberOfTilesAvailable(index, type) {
-	if (index < 0 || index > 9 || type < 0 || type > 4 || (type == 3 && index > 7)) {
+	if (index < 1 || index > 9 || type < 0 || type > 3 || (type == 3 && index > 7)) {
 		return 0;
 	}
 	if (getNumberOfPlayers() == 3 && (index > 1 && index < 9 && type == 1)) {
@@ -1265,7 +1265,7 @@ function getFoldThreshold(tilePrio, hand) {
 
 	var handScore = tilePrio.score.open;
 	if (isClosed) {
-		handScore = tilePrio.riichiValue;
+		handScore = tilePrio.score.riichi;
 	}
 
 	var waits = tilePrio.waits;
@@ -1317,7 +1317,7 @@ function getFoldThreshold(tilePrio, hand) {
 
 //Return true if danger is too high in relation to the value of the hand
 function shouldFold(tiles) {
-	if (tiles[0].shanten > 0 && tiles[0].shanten >= tilesLeft * 4) {
+	if (tiles[0].shanten > 0 && tiles[0].shanten * 4 >= tilesLeft) {
 		log("Hand is too far from tenpai before end of game. Fold!");
 		strategy = STRATEGIES.FOLD;
 		strategyAllowsCalls = false;
@@ -1336,9 +1336,9 @@ function shouldFold(tiles) {
 
 //Decide whether to call Riichi
 //Based on: https://mahjong.guide/2018/01/28/mahjong-fundamentals-5-riichi/
-function shouldRiichi(waits, yaku, handDora) {
-	var badWait = waits < WAITS_FOR_RIICHI;
-	var lotsOfDoraIndicators = dora.length >= 3;
+function shouldRiichi(tilePrio) {
+	var badWait = tilePrio.waits < WAITS_FOR_RIICHI;
+	var lotsOfDoraIndicators = tilePrio.dora.length >= 3;
 
 	//Thirteen Orphans
 	if (strategy == STRATEGIES.THIRTEEN_ORPHANS) {
@@ -1353,7 +1353,7 @@ function shouldRiichi(waits, yaku, handDora) {
 	}
 
 	//No waits
-	if (waits < 1) {
+	if (tilePrio.waits < 1) {
 		log("Decline Riichi because of no waits.");
 		return false;
 	}
@@ -1371,25 +1371,25 @@ function shouldRiichi(waits, yaku, handDora) {
 	}
 
 	// Not Dealer & bad Wait & Riichi is only yaku
-	if (seatWind != 1 && badWait && yaku.closed + handDora < 1 && !lotsOfDoraIndicators) {
+	if (seatWind != 1 && badWait && tilePrio.score.riichi < 2500 && !lotsOfDoraIndicators) {
 		log("Decline Riichi because of worthless hand, bad waits and not dealer.");
 		return false;
 	}
 
 	// High Danger and hand not worth much or bad wait
-	if (getCurrentDangerLevel() > 5000 && (yaku.closed + handDora < 2 || badWait)) {
+	if (getCurrentDangerLevel() > 5000 && (tilePrio.score.riichi < 3500 || badWait)) {
 		log("Decline Riichi because of worthless hand and high danger.");
 		return false;
 	}
 
 	// Hand already has high value and enough yaku
-	if (yaku.closed >= 1 && yaku.closed + handDora > 3 + (waits / 4)) {
+	if (tilePrio.yaku.closed >= 1 && tilePrio.score.riichi > 5000 + (tilePrio.waits * 500)) {
 		log("Decline Riichi because of high value hand with enough yaku.");
 		return false;
 	}
 
 	// Hand already has high value and no yaku
-	if (yaku.closed < 1 && handDora >= 2) {
+	if (tilePrio.yaku.closed < 1 && tilePrio.score.riichi > 4000) {
 		log("Accept Riichi because of high value hand without yaku.");
 		return true;
 	}
@@ -1555,7 +1555,7 @@ function printTile(tile) {
 function printTilePriority(tiles) {
 	log("Overall: Value Open: <" + Number(tiles[0].score.open).toFixed(0) +
 		"> Closed Value: <" + Number(tiles[0].score.closed).toFixed(0) +
-		"> Riichi Value: <" + Number(tiles[0].riichiValue).toFixed(0) +
+		"> Riichi Value: <" + Number(tiles[0].score.riichi).toFixed(0) +
 		"> Shanten: <" + Number(tiles[0].shanten).toFixed(0) + ">");
 	for (var i = 0; i < tiles.length && i < LOG_AMOUNT; i++) {
 		log(getTileName(tiles[i].tile, false) +
@@ -2038,7 +2038,9 @@ function getSanshokuDouko(triplets) {
 //Sanshoku Doujun
 function getSanshokuDoujun(sequences) {
 	for (var i = 1; i <= 7; i++) {
-		if (sequences.filter(tile => tile.index == i || tile.index == i + 1 || tile.index == i + 2).length >= 9) {
+		var seq = sequences.filter(tile => tile.index == i || tile.index == i + 1 || tile.index == i + 2);
+		if (seq.length >= 9 && seq.filter(tile => tile.type == 0) >= 3 &&
+			seq.filter(tile => tile.type == 1) >= 3 && seq.filter(tile => tile.type == 0) >= 3) {
 			return { open: 1, closed: 2 };
 		}
 	}
@@ -2108,7 +2110,12 @@ function getIttsuu(triples) {
 
 //Honitsu
 function getHonitsu(hand) {
-	if (hand.filter(tile => tile.type == 3 || tile.type == 0).length >= 13 || hand.filter(tile => tile.type == 3 || tile.type == 1).length >= 13 || hand.filter(tile => tile.type == 3 || tile.type == 2).length >= 13) { //&& tenpai ?
+	var pinzu = hand.filter(tile => tile.type == 3 || tile.type == 0).length;
+	var manzu = hand.filter(tile => tile.type == 3 || tile.type == 1).length;
+	var souzu = hand.filter(tile => tile.type == 3 || tile.type == 2).length;
+	if (pinzu >= 14 || pinzu >= hand.length ||
+		manzu >= 14 || manzu >= hand.length ||
+		souzu >= 14 || souzu >= hand.length) {
 		return { open: 2, closed: 3 };
 	}
 	return { open: 0, closed: 0 };
@@ -2116,7 +2123,12 @@ function getHonitsu(hand) {
 
 //Chinitsu
 function getChinitsu(hand) {
-	if (hand.filter(tile => tile.type == 0).length >= 13 || hand.filter(tile => tile.type == 1).length >= 13 || hand.filter(tile => tile.type == 2).length >= 13) { //&& tenpai ?
+	var pinzu = hand.filter(tile => tile.type == 0).length;
+	var manzu = hand.filter(tile => tile.type == 1).length;
+	var souzu = hand.filter(tile => tile.type == 2).length;
+	if (pinzu >= 14 || pinzu >= hand.length ||
+		manzu >= 14 || manzu >= hand.length ||
+		souzu >= 14 || souzu >= hand.length) {
 		return { open: 3, closed: 3 }; //Score gets added to honitsu -> 5/6 han
 	}
 	return { open: 0, closed: 0 };
@@ -2363,7 +2375,7 @@ function callRiichi(tiles) {
 				combination.push("5" + comb.charAt(1));
 			}
 			if (getTileName(tile.tile) == comb) {
-				if (shouldRiichi(tile.waits, tile.yaku, tile.dora)) {
+				if (shouldRiichi(tile)) {
 					var moqie = false;
 					if (getTileName(tile.tile) == getTileName(ownHand[ownHand.length - 1])) { //Is last tile?
 						moqie = true;
@@ -2502,12 +2514,11 @@ function getHandValues(hand, discardedTile) {
 		var originalShanten = baseShanten;
 	}
 
-	var expectedScore = { open: 0, closed: 0 }; //For the expected score (only looking at hands that improve the current hand)
+	var expectedScore = { open: 0, closed: 0, riichi: 0 }; //For the expected score (only looking at hands that improve the current hand)
 	var yaku = { open: 0, closed: 0 }; //Expected Yaku
 	var doraValue = 0; //Expected Dora
 	var waits = 0; //Waits when in Tenpai (Or fractions of it when 1 shanten)
 	var fu = 0;
-	var riichiValue = 0; // Only filled when already tenpai: Han value that only considers the winning hands next turn (so no "what if i draw another dora before winning")
 
 	var waitTiles = [];
 	var tileCombinations = []; //List of combinations for second step to save calculation time
@@ -2657,8 +2668,8 @@ function getHandValues(hand, discardedTile) {
 					}
 				}
 			}
-			riichiValue += calculateScore(0, thisYaku.closed + thisDora + 1 + 0.2 + getUradoraChance(), thisFu) * factor;
-			numberOfTotalWaitCombinations += factor;
+			expectedScore.riichi += calculateScore(0, thisYaku.closed + thisDora + 1 + 0.2 + getUradoraChance(), thisFu) * thisWait * factor;
+			numberOfTotalWaitCombinations += factor * thisWait;
 		}
 
 		if ((tileCombination.winning && !tile1Furiten) || //If this tile improves the hand (or wins): Add the values to our expected values
@@ -2785,8 +2796,8 @@ function getHandValues(hand, discardedTile) {
 	yaku.open /= numberOfTotalCombinations;
 	yaku.closed /= numberOfTotalCombinations;
 	if (numberOfTotalWaitCombinations > 0) {
-		riichiValue /= numberOfTotalWaitCombinations;
-		fu /= (numberOfTotalWaitCombinations * waits);
+		expectedScore.riichi /= numberOfTotalWaitCombinations;
+		fu /= numberOfTotalWaitCombinations;
 	}
 
 	fu = fu <= 30 ? 30 : fu;
@@ -2797,7 +2808,7 @@ function getHandValues(hand, discardedTile) {
 		efficiency = waits / 20;
 	}
 	else { //When not tenpai
-		riichiValue = calculateScore(0, yaku.closed + doraValue + 1 + 0.2 + getUradoraChance(), fu);
+		expectedScore.riichi = calculateScore(0, yaku.closed + doraValue + 1 + 0.2 + getUradoraChance());
 	}
 
 	if (getNumberOfPlayers() == 3) {
@@ -2812,7 +2823,7 @@ function getHandValues(hand, discardedTile) {
 	var priority = calculateTilePriority(efficiency, expectedScore, danger);
 	return {
 		tile: discardedTile, priority: priority, shanten: baseShanten, efficiency: efficiency,
-		score: expectedScore, dora: doraValue, yaku: yaku, waits: waits, danger: danger, fu: fu, riichiValue: riichiValue
+		score: expectedScore, dora: doraValue, yaku: yaku, waits: waits, danger: danger, fu: fu
 	};
 }
 
@@ -2854,7 +2865,6 @@ function chiitoitsuPriorities() {
 
 		var waits = 0;
 		var shanten = 0;
-		var riichiValue = 0;
 
 		var baseYaku = getYaku(newHand, calls[0]);
 		var yaku = { open: 0, closed: 0 };
@@ -2878,7 +2888,6 @@ function chiitoitsuPriorities() {
 						waits = numberOfTiles * getWaitQuality(tile); //Factor waits by "uselessness" for opponents
 						yaku = getYaku(newHand, calls[0]);
 						doraValue = getNumberOfDoras(newHand); //When Tenpai: The Dora/Yaku for the specific waits needs to be calculated seperately
-						riichiValue = yaku.closed + doraValue + 1 + 0.2 + getUradoraChance();
 					}
 				}
 			}
@@ -2891,14 +2900,17 @@ function chiitoitsuPriorities() {
 			doraValue += getNumberOfKitaOfPlayer(0) * getTileDoraValue({ index: 4, type: 3 });
 		}
 
-		var expectedScore = { open: 1000, closed: calculateScore(0, yaku.closed + doraValue, 25) };
+		var expectedScore = {
+			open: 1000, closed: calculateScore(0, yaku.closed + doraValue, 25),
+			riichi: calculateScore(0, yaku.closed + doraValue + 1 + 0.2 + getUradoraChance(), 25)
+		};
 
 		var efficiency = (shanten + (baseShanten - originalShanten)) * -1
 		var danger = getTileDanger(ownHand[i], newHand);
 		var priority = calculateTilePriority(efficiency, expectedScore, danger);
 		tiles.push({
 			tile: ownHand[i], priority: priority, shanten: baseShanten, efficiency: efficiency,
-			score: expectedScore, dora: doraValue, yaku: yaku, waits: waits, danger: danger, fu: 25, riichiValue: riichiValue
+			score: expectedScore, dora: doraValue, yaku: yaku, waits: waits, danger: danger, fu: 25
 		});
 	}
 	tiles.sort(function (p1, p2) {
@@ -2952,12 +2964,13 @@ function thirteenOrphansPriorities() {
 
 		var efficiency = shanten == originalShanten ? 1 : 0;
 		var danger = getTileDanger(ownHand[i], hand);
-		var expectedScore = { open: calculateScore(0, yaku.open + doraValue), closed: calculateScore(0, yaku.closed + doraValue) };
+		var yakuman = calculateScore(0, 13);
+		var expectedScore = { open: 0, closed: yakuman, riichi: yakuman };
 		var priority = calculateTilePriority(efficiency, expectedScore, danger);
 
 		tiles.push({
 			tile: ownHand[i], priority: priority, shanten: shanten, efficiency: efficiency,
-			score: expectedScore, dora: doraValue, yaku: yaku, waits: waits, danger: danger, fu: 30, riichiValue: 13
+			score: expectedScore, dora: doraValue, yaku: yaku, waits: waits, danger: danger, fu: 30
 		});
 
 	}
