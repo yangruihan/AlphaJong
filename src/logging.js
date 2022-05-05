@@ -58,14 +58,14 @@ function printTile(tile) {
 }
 
 function getTilePriorityString(tileItem) {
-	return getTileName(tiles[i].tile, false) +
-			": Priority: <" + Number(tiles[i].priority).toFixed(3) +
-			"> Efficiency: <" + Number(tiles[i].efficiency).toFixed(3) +
-			"> Yaku Open: <" + Number(tiles[i].yaku.open).toFixed(3) +
-			"> Yaku Closed: <" + Number(tiles[i].yaku.closed).toFixed(3) +
-			"> Dora: <" + Number(tiles[i].dora).toFixed(3) +
-			"> Waits: <" + Number(tiles[i].waits).toFixed(3) +
-			"> Danger: <" + Number(tiles[i].danger).toFixed(2) + ">";
+	return getTileName(tileItem.tile, false) +
+			": Priority: <" + Number(tileItem.priority).toFixed(3) +
+			"> Efficiency: <" + Number(tileItem.efficiency).toFixed(3) +
+			"> Yaku Open: <" + Number(tileItem.yaku.open).toFixed(3) +
+			"> Yaku Closed: <" + Number(tileItem.yaku.closed).toFixed(3) +
+			"> Dora: <" + Number(tileItem.dora).toFixed(3) +
+			"> Waits: <" + Number(tileItem.waits).toFixed(3) +
+			"> Danger: <" + Number(tileItem.danger).toFixed(2) + ">";
 }
 
 //Print given tile priorities
