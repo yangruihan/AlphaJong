@@ -82,6 +82,11 @@ var showingStrategy = false; //Current in own turn?
 var playerDiscardSafetyList = [[], [], [], []];
 var totalPossibleWaits = {};
 
+//crt choosed tile info variables
+var viewInjected = false;
+var crtSelectTile = null;
+var handTilesdValue = [];
+
 // Display
 var tileEmojiList = [
 	["red🀝" ,"🀙" ,"🀚" ,"🀛" ,"🀜" ,"🀝" ,"🀞" ,"🀟" ,"🀠" ,"🀡"],
@@ -109,6 +114,7 @@ var autorunCheckbox = document.createElement("input");
 var aimodeCombobox = document.createElement("select");
 var roomCombobox = document.createElement("select");
 var currentActionOutput = document.createElement("input");
+var currentChoosedTileInfo = document.createElement("textarea");
 var debugButton = document.createElement("button");
 var hideButton = document.createElement("button");
 
@@ -181,6 +187,13 @@ function initGui() {
 		showCrtActionMsg("Bot started.");
 	}
 	guiSpan.appendChild(currentActionOutput);
+
+	currentChoosedTileInfo.readOnly = "true";
+	currentActionOutput.size = "15";
+	currentChoosedTileInfo.cols = 20;
+	currentChoosedTileInfo.rows = 10;
+	currentChoosedTileInfo.style.marginRight = "15px";
+	guiSpan.appendChild(currentChoosedTileInfo);
 
 	debugButton.innerHTML = "Debug";
 	debugButton.onclick = function () {
@@ -289,6 +302,10 @@ function showCrtStrategyMsg(msg) {
 function clearCrtStrategyMsg() {
 	showingStrategy = false;
 	currentActionOutput.value = "";
+}
+
+function showCrtChoosedTileInfo(msg) {
+	currentChoosedTileInfo.value = msg;
 }
 //################################
 // API (MAHJONG SOUL)
@@ -1551,6 +1568,17 @@ function printTile(tile) {
 	log(getTileName(tile, false));
 }
 
+function getTilePriorityString(tileItem) {
+	return getTileName(tiles[i].tile, false) +
+			": Priority: <" + Number(tiles[i].priority).toFixed(3) +
+			"> Efficiency: <" + Number(tiles[i].efficiency).toFixed(3) +
+			"> Yaku Open: <" + Number(tiles[i].yaku.open).toFixed(3) +
+			"> Yaku Closed: <" + Number(tiles[i].yaku.closed).toFixed(3) +
+			"> Dora: <" + Number(tiles[i].dora).toFixed(3) +
+			"> Waits: <" + Number(tiles[i].waits).toFixed(3) +
+			"> Danger: <" + Number(tiles[i].danger).toFixed(2) + ">";
+}
+
 //Print given tile priorities
 function printTilePriority(tiles) {
 	log("Overall: Value Open: <" + Number(tiles[0].score.open).toFixed(0) +
@@ -1558,14 +1586,7 @@ function printTilePriority(tiles) {
 		"> Riichi Value: <" + Number(tiles[0].riichiValue).toFixed(0) +
 		"> Shanten: <" + Number(tiles[0].shanten).toFixed(0) + ">");
 	for (var i = 0; i < tiles.length && i < LOG_AMOUNT; i++) {
-		log(getTileName(tiles[i].tile, false) +
-			": Priority: <" + Number(tiles[i].priority).toFixed(3) +
-			"> Efficiency: <" + Number(tiles[i].efficiency).toFixed(3) +
-			"> Yaku Open: <" + Number(tiles[i].yaku.open).toFixed(3) +
-			"> Yaku Closed: <" + Number(tiles[i].yaku.closed).toFixed(3) +
-			"> Dora: <" + Number(tiles[i].dora).toFixed(3) +
-			"> Waits: <" + Number(tiles[i].waits).toFixed(3) +
-			"> Danger: <" + Number(tiles[i].danger).toFixed(2) + ">");
+		log(getTilePriorityString(tiles[i]));
 	}
 }
 
@@ -3024,6 +3045,7 @@ function getMissingTilesForThirteenOrphans(uniqueTerminalHonors) {
 function discard() {
 
 	var tiles = getTilePriorities(ownHand);
+	handTilesdValue = tiles;
 
 	if (strategy == STRATEGIES.FOLD || shouldFold(tiles)) {
 		return discardFold(tiles);
@@ -3695,6 +3717,8 @@ function main() {
 		goToLobby();
 	}
 
+	injectView();
+
 	var operations = getOperationList(); //Get possible Operations
 
 	if (operations == null || operations.length == 0) {
@@ -3839,6 +3863,7 @@ function setData(mainUpdate = true) {
 	dora = getDora();
 
 	ownHand = [];
+	handTilesdValue = [];
 	for (let hand of getPlayerHand()) { //Get own Hand
 		ownHand.push(hand.val);
 	}
@@ -3912,4 +3937,33 @@ function checkForEnd() {
 //Reload Page to get back to lobby
 function goToLobby() {
 	location.reload(1);
+	viewInjected = false;
 }
+
+function injectView() {
+	if (viewInjected) {
+		return;
+	}
+	viewInjected = true;
+
+	const m = view.DesktopMgr.prototype.setChoosedPai;
+	view.DesktopMgr.prototype.setChoosedPai = (e, ...rest) => {
+		const r = m.call(view.DesktopMgr.Inst, e, ...rest); // render normally
+
+		if (crtSelectTile != null && e == null) {
+			showCrtChoosedTileInfo("");
+		}
+
+		if (handTilesdValue.length > 0 && e != null && e != crtSelectTile) {
+			let tileItem = handTilesdValue.find(i => i.tile.index === e.index && i.tile.type === e.type && i.tile.dora === e.dora);
+			if (tileItem != 'undefined') {
+				showCrtChoosedTileInfo(getTilePriorityString(tileItem));
+			}
+		}
+
+		crtSelectTile = e;
+
+		return r;
+	}
+}
+
