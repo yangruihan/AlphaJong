@@ -21,7 +21,7 @@ var FOLD_CONSTANT = 10; //Lower -> Earlier Fold. Default: 10
 
 //CALLS
 var CALL_CONSTANT = 3; //Amount of han (Open Yaku + Dora) that is needed for calls (to accelerate high value hands). Default: 3
-var CALL_KAN_CONSTANT = 60; //Higher Value: Higher Threshold for calling Kans. Default: 60
+var CALL_KAN_CONSTANT = 50; //Higher Value: Call Kan more often. Default: 50
 
 //HAND EVALUATION CONSTANTS. Higher number => more important.
 var EFFICIENCY_VALUE = 0.5; // From 0-1. Lower: Slower hands. Higher: Daster hands. Default: 0.5
@@ -601,7 +601,7 @@ function getRooms() {
 	}
 }
 
-// Client language
+// Client language: ["chs", "chs_t", "en", "jp"]
 function getLanguage() {
 	return GameMgr.client_language;
 }
@@ -1346,6 +1346,7 @@ function shouldFold(tiles) {
 
 	if (tiles[0].danger > foldThreshold) {
 		log("Tile Danger " + Number(tiles[0].danger).toFixed(2) + " of " + getTileName(tiles[0].tile, false) + " is too dangerous.");
+		strategyAllowsCalls = false; //Don't set the strategy to full fold, but prevent calls
 		return true;
 	}
 	return false;
@@ -2164,7 +2165,6 @@ function getChinitsu(hand) {
 function determineStrategy() {
 
 	if (strategy != STRATEGIES.FOLD) {
-
 		var handTriples = parseInt(getTriples(getHandWithCalls(ownHand)).length / 3);
 		var pairs = getPairsAsArray(ownHand).length / 2;
 
@@ -2177,8 +2177,11 @@ function determineStrategy() {
 			strategyAllowsCalls = false;
 		}
 		else {
+			if (strategy == STRATEGIES.THIRTEEN_ORPHANS ||
+				strategy == STRATEGIES.CHIITOITSU) {
+				strategyAllowsCalls = true; //Don't reset this value when bot is playing defensively without a full fold
+			}
 			strategy = STRATEGIES.GENERAL;
-			strategyAllowsCalls = true;
 		}
 	}
 	log("Strategy: " + strategy);
@@ -2290,7 +2293,7 @@ function callTriple(combinations, operation) {
 	else if (newHandValue.score.open >= 4000 && newHandValue.score.open > handValue.score.closed * 0.7) { //High value hand? -> Go for a fast win
 		log("Call accepted because of high value hand!");
 	}
-	else if (newHandValue.score.open >= handValue.score.closed * 1.5) { //Call gives additional value to hand
+	else if (newHandValue.score.open >= handValue.score.closed * 1.75) { //Call gives additional value to hand
 		log("Call accepted because it boosts the value of the hand!");
 	}
 	else if (newHandValue.shanten == 0 && newHandValue.score.open > handValue.score.closed * 0.9 && newHandValue.waits > 2 && // Make hand ready and eliminate a bad wait
@@ -2339,10 +2342,12 @@ function callKan(operation, tileForCall) {
 
 	var newTiles = getHandValues(getHandWithCalls(removeTilesFromTileArray(ownHand, [tileForCall]))); //Check if efficiency goes down without additional tile
 
-	if (isPlayerRiichi(0) || (strategyAllowsCalls && //TODO: Rework this
-		tiles.efficiency >= 4 - (tilesLeft / 30) - (1 - (CALL_KAN_CONSTANT / 50)) &&
-		getCurrentDangerLevel() < 1000 - (CALL_KAN_CONSTANT * 10) &&
-		(tiles.efficiency * 0.95) < newTiles.efficiency)) {
+	if (isPlayerRiichi(0) ||
+		(strategyAllowsCalls &&
+			tiles.shanten <= (tilesLeft / 30) + (CALL_KAN_CONSTANT / 50) &&
+			getCurrentDangerLevel() < 1000 + (CALL_KAN_CONSTANT * 10) &&
+			(tiles.shanten <= newTiles.shanten) &&
+			(tiles.efficiency * 0.9 <= newTiles.efficiency))) {
 		makeCall(operation);
 		log("Kan accepted!");
 	}
@@ -3491,6 +3496,10 @@ function getWaitScoreForTileAndPlayer(player, tile, includeOthers, useKnowledgeO
 		tile0 = tile0Public;
 	}
 	var furitenFactor = getFuritenValue(player, tile, includeOthers);
+
+	if (furitenFactor == 0) {
+		return 0;
+	}
 
 	//Less priority on Ryanmen and Bridge Wait when player is doing Toitoi
 	var toitoiFactor = 1 - (isDoingToiToi(player) / 3);
