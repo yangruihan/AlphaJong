@@ -39,6 +39,11 @@ function getTileDangerForPlayer(tile, player, playerPerspective = 0) {
 		return 0;
 	}
 
+	//Honor tiles are often a preferred wait
+	if (tile.type == 3) {
+		danger *= 1.3;
+	}
+
 	//Is Dora? -> 10% more dangerous
 	danger *= (1 + (getTileDoraValue(tile) / 10));
 
@@ -107,7 +112,7 @@ function getDealInChanceForTileAndPlayer(player, tile, playerPerspective = 0) {
 	if (playerPerspective == 0) {
 		if (typeof totalPossibleWaits.turn == 'undefined' || totalPossibleWaits.turn != tilesLeft) {
 			totalPossibleWaits = { turn: tilesLeft, totalWaits: [0, 0, 0, 0] }; // Save it in a global variable to not calculate this expensive step multiple times per turn
-			for (let pl = 1; pl <= 3; pl++) {
+			for (let pl = 1; pl < getNumberOfPlayers(); pl++) {
 				totalPossibleWaits.totalWaits[pl] = getTotalPossibleWaits(pl);
 			}
 		}
@@ -310,7 +315,7 @@ function isPlayerPushing(player) {
 		return 0;
 	}
 
-	var pushValue = -1 + (lastDiscardSafety.reduce((v1, v2) => v1 + v2, 0) / (lastDiscardSafety.length * 20));
+	var pushValue = -1 + (lastDiscardSafety.reduce((v1, v2) => v1 + (v2 * 20), 0) / lastDiscardSafety.length);
 	if (pushValue > 1) {
 		pushValue = 1;
 	}
@@ -386,6 +391,10 @@ function getWaitScoreForTileAndPlayer(player, tile, includeOthers, useKnowledgeO
 	}
 	var furitenFactor = getFuritenValue(player, tile, includeOthers);
 
+	if (furitenFactor == 0) {
+		return 0;
+	}
+
 	//Less priority on Ryanmen and Bridge Wait when player is doing Toitoi
 	var toitoiFactor = 1 - (isDoingToiToi(player) / 3);
 
@@ -426,8 +435,6 @@ function getWaitScoreForTileAndPlayer(player, tile, includeOthers, useKnowledgeO
 	if (score > 200) {
 		score = 200 + (Math.sqrt(score)); //add "overflow" that is worth less
 	}
-
-	score /= 1.6; //Divide by this number to normalize result (more or less)
 
 	return score;
 }
@@ -509,7 +516,7 @@ function shouldKeepSafeTile(player, hand, danger) {
 		}
 	}
 
-	var sakigiri = (2 - safeTiles) * (SAKIGIRI_VALUE * 5);
+	var sakigiri = (2 - safeTiles) * (SAKIGIRI * 2);
 	if (sakigiri < 0) { // More than 2 safe tiles: Sakigiri not necessary
 		return 0;
 	}

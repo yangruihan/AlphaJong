@@ -239,7 +239,7 @@ function isInGame() {
 }
 
 function doesPlayerExist(player) {
-	return typeof view.DesktopMgr.Inst.players[player].hand != 'undefined';
+	return typeof view.DesktopMgr.Inst.players[player].hand != 'undefined' && view.DesktopMgr.Inst.players[player].hand != null;
 }
 
 function getPlayerScore(player) {
@@ -292,7 +292,7 @@ function getRooms() {
 	}
 }
 
-// Client language
+// Client language: ["chs", "chs_t", "en", "jp"]
 function getLanguage() {
 	return GameMgr.client_language;
 }
@@ -323,8 +323,8 @@ function trackDiscardTiles() {
 				setData(false);
 				visibleTiles.push(arguments[0]);
 				var danger = getTileDanger(arguments[0], null, seat2LocalPosition(this.player.seat));
-				if (arguments[2] && danger < 20) { // Ignore Tsumogiri of a safetile
-					danger = -1;
+				if (arguments[2] && danger < 0.01) { // Ignore Tsumogiri of a safetile, set it to average danger
+					danger = 0.05;
 				}
 				playerDiscardSafetyList[seat2LocalPosition(this.player.seat)].push(danger);
 				return _super.apply(this, arguments); // Call original function

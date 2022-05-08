@@ -16,24 +16,19 @@
 // Contains Parameters to change the playstile of the bot. Usually no need to change anything.
 //################################
 
-//DEFENSE CONSTANTS
-var FOLD_CONSTANT = 10; //Lower -> Earlier Fold. Default: 10
+//HAND EVALUATION CONSTANTS
+var EFFICIENCY = 1.0; // Lower: Slower and more expensive hands. Higher: Faster and cheaper hands. Default: 1.0, Minimum: 0
+var SAFETY = 1.0; // Lower: The bot will not pay much attention to safety. Higher: The bot will try to play safer. Default: 1.0, Minimum: 0
+var SAKIGIRI = 1.0; //Lower: Don't place much importance on Sakigiri. Higher: Try to Sakigiri more often. Default: 1.0, Minimum: 0
 
-//CALLS
-var CALL_CONSTANT = 3; //Amount of han (Open Yaku + Dora) that is needed for calls (to accelerate high value hands). Default: 3
-var CALL_KAN_CONSTANT = 60; //Higher Value: Higher Threshold for calling Kans. Default: 60
-
-//HAND EVALUATION CONSTANTS. Higher number => more important.
-var EFFICIENCY_VALUE = 0.5; // From 0-1. Lower: Slower hands. Higher: Daster hands. Default: 0.5
-var SCORE_VALUE = 0.5 // From 0-1. Lower: Cheaper hands. Higher: More expensive hands. Default: 0.5
-var SAFETY_VALUE = 0.5; // From 0-1. Lower: The bot will not pay much attention to safety. Higher: The bot will try to play safer. Default: 0.5
-var SAKIGIRI_VALUE = 0.5; // 0 -> Never Sakigiri. Default: 0.3
+//CALL CONSTANTS
+var CALL_PON_CHI = 1.0; //Lower: Call Pon/Chi less often. Higher: Call Pon/Chi more often. Default: 1.0, Minimum: 0
+var CALL_KAN = 1.0; //Lower: Call Kan less often. Higher: Call Kan more often. Default: 1.0, Minimum: 0
 
 //STRATEGY CONSTANTS
+var RIICHI = 1.0; //Lower: Call Riichi less often. Higher: Call Riichi more often. Default: 1.0, Minimum: 0
 var CHIITOITSU = 5; //Number of Pairs in Hand to go for chiitoitsu. Default: 5
 var THIRTEEN_ORPHANS = 10; //Number of Honor/Terminals in hand to go for 13 orphans. Default: 10
-var RIICHI_TILES_LEFT = 6; //Minimum amount of tiles that need to be left for calling Riichi. Default: 6
-var WAITS_FOR_RIICHI = 5; //Amount of waits that is considered good enough for calling Riichi. Default: 5
 
 //MISC
 var LOG_AMOUNT = 3; //Amount of Messages to log for Tile Priorities
@@ -548,7 +543,7 @@ function isInGame() {
 }
 
 function doesPlayerExist(player) {
-	return typeof view.DesktopMgr.Inst.players[player].hand != 'undefined';
+	return typeof view.DesktopMgr.Inst.players[player].hand != 'undefined' && view.DesktopMgr.Inst.players[player].hand != null;
 }
 
 function getPlayerScore(player) {
@@ -601,7 +596,7 @@ function getRooms() {
 	}
 }
 
-// Client language
+// Client language: ["chs", "chs_t", "en", "jp"]
 function getLanguage() {
 	return GameMgr.client_language;
 }
@@ -632,8 +627,8 @@ function trackDiscardTiles() {
 				setData(false);
 				visibleTiles.push(arguments[0]);
 				var danger = getTileDanger(arguments[0], null, seat2LocalPosition(this.player.seat));
-				if (arguments[2] && danger < 20) { // Ignore Tsumogiri of a safetile
-					danger = -1;
+				if (arguments[2] && danger < 0.01) { // Ignore Tsumogiri of a safetile, set it to average danger
+					danger = 0.05;
 				}
 				playerDiscardSafetyList[seat2LocalPosition(this.player.seat)].push(danger);
 				return _super.apply(this, arguments); // Call original function
@@ -1292,7 +1287,7 @@ function getFoldThreshold(tilePrio, hand) {
 	if (tilePrio.shanten == 0) {
 		var foldValue = waits * handScore / 40;
 	}
-	else if (tilePrio.shanten == 1) {
+	else if (tilePrio.shanten == 1 && strategy == STRATEGIES.GENERAL) {
 		var foldValue = waits * handScore / 30;
 	}
 	else {
@@ -1327,6 +1322,8 @@ function getFoldThreshold(tilePrio, hand) {
 	}
 	foldValue *= 1 + (0.4 - (safeTiles / 5)); // 20% less likely to fold when only 1 safetile, or 40% when 0 safetiles
 
+	foldValue /= SAFETY;
+
 	foldValue = foldValue < 0 ? 0 : foldValue;
 
 	return Number(foldValue).toFixed(2);
@@ -1346,6 +1343,7 @@ function shouldFold(tiles) {
 
 	if (tiles[0].danger > foldThreshold) {
 		log("Tile Danger " + Number(tiles[0].danger).toFixed(2) + " of " + getTileName(tiles[0].tile, false) + " is too dangerous.");
+		strategyAllowsCalls = false; //Don't set the strategy to full fold, but prevent calls
 		return true;
 	}
 	return false;
@@ -1354,7 +1352,7 @@ function shouldFold(tiles) {
 //Decide whether to call Riichi
 //Based on: https://mahjong.guide/2018/01/28/mahjong-fundamentals-5-riichi/
 function shouldRiichi(tilePrio) {
-	var badWait = tilePrio.waits < WAITS_FOR_RIICHI;
+	var badWait = tilePrio.waits < 6 - RIICHI;
 	var lotsOfDoraIndicators = tilePrio.dora.length >= 3;
 
 	//Thirteen Orphans
@@ -1364,7 +1362,7 @@ function shouldRiichi(tilePrio) {
 	}
 
 	//Close to end of game
-	if (tilesLeft <= RIICHI_TILES_LEFT) {
+	if (tilesLeft <= 7 - RIICHI) {
 		log("Decline Riichi because close to end of game.");
 		return false;
 	}
@@ -1388,25 +1386,25 @@ function shouldRiichi(tilePrio) {
 	}
 
 	// Not Dealer & bad Wait & Riichi is only yaku
-	if (seatWind != 1 && badWait && tilePrio.score.riichi < 2500 && !lotsOfDoraIndicators) {
+	if (seatWind != 1 && badWait && tilePrio.score.riichi < 4000 - (RIICHI * 1000) && !lotsOfDoraIndicators) {
 		log("Decline Riichi because of worthless hand, bad waits and not dealer.");
 		return false;
 	}
 
 	// High Danger and hand not worth much or bad wait
-	if (getCurrentDangerLevel() > 5000 && (tilePrio.score.riichi < 3500 || badWait)) {
+	if (getCurrentDangerLevel() > 5000 && (tilePrio.score.riichi < 5000 - (RIICHI * 1000) || badWait)) {
 		log("Decline Riichi because of worthless hand and high danger.");
 		return false;
 	}
 
 	// Hand already has high value and enough yaku
-	if (tilePrio.yaku.closed >= 1 && tilePrio.score.riichi > 5000 + (tilePrio.waits * 500)) {
+	if (tilePrio.yaku.closed >= 1 && tilePrio.score.riichi > 5000 + (RIICHI * 1000) + (tilePrio.waits * 500)) {
 		log("Decline Riichi because of high value hand with enough yaku.");
 		return false;
 	}
 
 	// Hand already has high value and no yaku
-	if (tilePrio.yaku.closed < 1 && tilePrio.score.riichi > 4000) {
+	if (tilePrio.yaku.closed < 1 && tilePrio.score.riichi > 5000 - (RIICHI * 1000)) {
 		log("Accept Riichi because of high value hand without yaku.");
 		return true;
 	}
@@ -1791,7 +1789,10 @@ function getYaku(inputHand, inputCalls, triplesAndPairs = null) {
 		triplesAndPairs.triples = triplesAndPairs.triples.concat(inputCalls);
 	}
 	var triplets = getTripletsAsArray(hand);
-	var sequences = getBestSequenceCombination(inputHand).concat(getBestSequenceCombination(inputCalls));
+	var sequences = getBestSequenceCombination(removeTilesFromTileArray(inputHand, triplets.concat(triplesAndPairs.pairs))).concat(getBestSequenceCombination(inputCalls));
+
+	//Pinfu is applied in ai_offense when fu is 30, same with Riichi.
+	//There's no certain way to check for it here, so ignore it
 
 	//Yakuhai
 	//Wind/Dragon Triples
@@ -1802,20 +1803,11 @@ function getYaku(inputHand, inputCalls, triplesAndPairs = null) {
 		yakuClosed += yakuhai.closed;
 	}
 
-	//Riichi (Bot has better results without additional value for Riichi)
-	//Closed
-	//var riichi = getRiichi(tenpai);
-	//yakuOpen += riichi.open;
-	//yakuClosed += riichi.closed;
-
 	//Tanyao
 	//Open
 	var tanyao = getTanyao(hand, triplesAndPairs, inputCalls);
 	yakuOpen += tanyao.open;
 	yakuClosed += tanyao.closed;
-
-	//Pinfu is applied in ai_offense when fu=30
-	//There's no certain way to check for it here, so ignore it
 
 	//Iipeikou (Identical Sequences in same type)
 	//Closed
@@ -1993,14 +1985,6 @@ function getYakuhai(triples) {
 	return { open: yakuhai, closed: yakuhai };
 }
 
-//Riichi
-function getRiichi(tenpai) {
-	if (tenpai) {
-		return { open: 0, closed: 1 };
-	}
-	return { open: 0, closed: 0 };
-}
-
 //Tanyao
 function getTanyao(hand, triplesAndPairs, inputCalls) {
 	if (hand.filter(tile => tile.type != 3 && tile.index > 1 && tile.index < 9).length >= 13 &&
@@ -2108,7 +2092,8 @@ function getHonrou(triplets) {
 
 //Junchan
 function getJunchan(triplets, sequences, pairs) {
-	if ((triplets.concat(pairs)).filter(tile => tile.type != 3 && (tile.index == 1 || tile.index == 9)).length + (sequences.filter(tile => tile.index == 1 || tile.index == 9).length * 3) >= 13) {
+	if ((triplets.concat(pairs)).filter(tile => tile.type != 3 && (tile.index == 1 || tile.index == 9)).length +
+		(sequences.filter(tile => tile.index == 1 || tile.index == 9).length * 3) >= 13) {
 		return { open: 1, closed: 1 }; // - Added to Chanta
 	}
 	return { open: 0, closed: 0 };
@@ -2164,12 +2149,10 @@ function getChinitsu(hand) {
 function determineStrategy() {
 
 	if (strategy != STRATEGIES.FOLD) {
-
 		var handTriples = parseInt(getTriples(getHandWithCalls(ownHand)).length / 3);
 		var pairs = getPairsAsArray(ownHand).length / 2;
 
-		if ((pairs == 6 || (pairs >= CHIITOITSU && handTriples < 2) ||
-			(pairs >= CHIITOITSU - 1 && handTriples == 0)) && isClosed) {
+		if ((pairs == 6 || (pairs >= CHIITOITSU && handTriples < 2)) && isClosed) {
 			strategy = STRATEGIES.CHIITOITSU;
 			strategyAllowsCalls = false;
 		}
@@ -2178,8 +2161,11 @@ function determineStrategy() {
 			strategyAllowsCalls = false;
 		}
 		else {
+			if (strategy == STRATEGIES.THIRTEEN_ORPHANS ||
+				strategy == STRATEGIES.CHIITOITSU) {
+				strategyAllowsCalls = true; //Don't reset this value when bot is playing defensively without a full fold
+			}
 			strategy = STRATEGIES.GENERAL;
-			strategyAllowsCalls = true;
 		}
 	}
 	log("Strategy: " + strategy);
@@ -2276,22 +2262,22 @@ function callTriple(combinations, operation) {
 		return false;
 	}
 
-	if (isClosed && newHandValue.score.open < 1500 && newHandValue.shanten >= 3 && seatWind != 1) { // Hand is worthless and slow and not dealer. Should prevent cheap yakuhai or tanyao calls
+	if (isClosed && newHandValue.score.open < 1000 + (CALL_PON_CHI * 500) && newHandValue.shanten >= 4 - CALL_PON_CHI && seatWind != 1) { // Hand is worthless and slow and not dealer. Should prevent cheap yakuhai or tanyao calls
 		log("Hand is cheap and slow! Declined!");
 		declineCall(operation);
 		return false;
 	}
 
-	if (handValue.shanten >= 4 && seatWind == 1) { //Very slow hand & dealer? -> Go for a fast win
+	if (handValue.shanten >= 5 - (CALL_PON_CHI * 500) && seatWind == 1) { //Very slow hand & dealer? -> Go for a fast win
 		log("Call accepted because of bad hand and dealer position!");
 	}
 	else if (!isClosed && newHandValue.score.open > handValue.score.open * 0.9) { //Hand is already open and not much value is lost
 		log("Call accepted because hand is already open!");
 	}
-	else if (newHandValue.score.open >= 4000 && newHandValue.score.open > handValue.score.closed * 0.7) { //High value hand? -> Go for a fast win
+	else if (newHandValue.score.open >= 4500 - (CALL_PON_CHI * 500) && newHandValue.score.open > handValue.score.closed * 0.7) { //High value hand? -> Go for a fast win
 		log("Call accepted because of high value hand!");
 	}
-	else if (newHandValue.score.open >= handValue.score.closed * 1.5) { //Call gives additional value to hand
+	else if (newHandValue.score.open >= handValue.score.closed * 1.75) { //Call gives additional value to hand
 		log("Call accepted because it boosts the value of the hand!");
 	}
 	else if (newHandValue.shanten == 0 && newHandValue.score.open > handValue.score.closed * 0.9 && newHandValue.waits > 2 && // Make hand ready and eliminate a bad wait
@@ -2340,10 +2326,12 @@ function callKan(operation, tileForCall) {
 
 	var newTiles = getHandValues(getHandWithCalls(removeTilesFromTileArray(ownHand, [tileForCall]))); //Check if efficiency goes down without additional tile
 
-	if (isPlayerRiichi(0) || (strategyAllowsCalls && //TODO: Rework this
-		tiles.efficiency >= 4 - (tilesLeft / 30) - (1 - (CALL_KAN_CONSTANT / 50)) &&
-		getCurrentDangerLevel() < 1000 - (CALL_KAN_CONSTANT * 10) &&
-		(tiles.efficiency * 0.95) < newTiles.efficiency)) {
+	if (isPlayerRiichi(0) ||
+		(strategyAllowsCalls &&
+			tiles.shanten <= (tilesLeft / 35) + CALL_KAN &&
+			getCurrentDangerLevel() < 1000 + (CALL_KAN * 500) &&
+			tiles.shanten <= newTiles.shanten &&
+			tiles.efficiency * 0.9 <= newTiles.efficiency)) {
 		makeCall(operation);
 		log("Kan accepted!");
 	}
@@ -2679,14 +2667,12 @@ function getHandValues(hand, discardedTile) {
 
 		if (tileCombination.winning) { //For winning tiles: Add waits, fu and the Riichi value (value only for drawing winning tiles)
 			if (!tile1Furiten) {
-				if (isClosed || thisYaku.open >= 1) {
-					var thisWait = numberOfTiles1 * getWaitQuality(tile1);
-					waits += thisWait;
-					thisFu = calculateFu(triples2, calls[0], pairs2, removeTilesFromTileArray(hand, triples.concat(pairs).concat(tile1)), tile1);
-					fu += thisFu * thisWait * factor;
-					if (thisFu == 30 && isClosed) {
-						thisYaku.closed += 1;
-					}
+				var thisWait = numberOfTiles1 * getWaitQuality(tile1);
+				waits += thisWait;
+				thisFu = calculateFu(triples2, calls[0], pairs2, removeTilesFromTileArray(hand, triples.concat(pairs).concat(tile1)), tile1);
+				fu += thisFu * thisWait * factor;
+				if (thisFu == 30 && isClosed) {
+					thisYaku.closed += 1;
 				}
 			}
 			expectedScore.riichi += calculateScore(0, thisYaku.closed + thisDora + 1 + 0.2 + getUradoraChance(), thisFu) * thisWait * factor;
@@ -2848,20 +2834,27 @@ function getHandValues(hand, discardedTile) {
 	};
 }
 
+//Calculates a relative priority based on how "good" the given values are.
+//The resulting priority value is useless as an absolute value, only use it relatively to compare with other values of the same hand.
 function calculateTilePriority(efficiency, expectedScore, danger) {
 	var score = expectedScore.open;
 	if (isClosed) {
 		score = expectedScore.closed;
 	}
 
-	var placementFactor = 1; //TODO: Add this to the formula
+	var placementFactor = 1;
 
-	if (isLastGame() && getDistanceToFirst() < -10000) { //Huge lead in last game
-		placementFactor = 0.75;
+	if (isLastGame() && getDistanceToFirst() < 0) { //First Place in last game:
+		placementFactor = 1.5;
 	}
 
-	//TODO: Add parameters
-	return efficiency * (score - danger);
+	//Basically the formula should be efficiency multiplied by score (=expected value of the hand)
+	//But it's generally better to just win even with a small score to prevent others from winning (and no-ten penalty) 
+	//That's why efficiency is weighted a bit higher with Math.pow.
+	var weightedEfficiency = Math.pow(Math.abs(efficiency), 0.3 + EFFICIENCY * placementFactor);
+	weightedEfficiency = efficiency < 0 ? -weightedEfficiency : weightedEfficiency;
+
+	return weightedEfficiency * (score - (danger * SAFETY));
 }
 
 //Get Chiitoitsu Priorities -> Look for Pairs
@@ -2926,7 +2919,7 @@ function chiitoitsuPriorities() {
 			riichi: calculateScore(0, yaku.closed + doraValue + 1 + 0.2 + getUradoraChance(), 25)
 		};
 
-		var efficiency = (shanten + (baseShanten - originalShanten)) * -1
+		var efficiency = (shanten + (baseShanten - originalShanten)) * -1;
 		var danger = getTileDanger(ownHand[i], newHand);
 		var priority = calculateTilePriority(efficiency, expectedScore, danger);
 		tiles.push({
@@ -3146,6 +3139,11 @@ function getTileDangerForPlayer(tile, player, playerPerspective = 0) {
 		return 0;
 	}
 
+	//Honor tiles are often a preferred wait
+	if (tile.type == 3) {
+		danger *= 1.3;
+	}
+
 	//Is Dora? -> 10% more dangerous
 	danger *= (1 + (getTileDoraValue(tile) / 10));
 
@@ -3214,7 +3212,7 @@ function getDealInChanceForTileAndPlayer(player, tile, playerPerspective = 0) {
 	if (playerPerspective == 0) {
 		if (typeof totalPossibleWaits.turn == 'undefined' || totalPossibleWaits.turn != tilesLeft) {
 			totalPossibleWaits = { turn: tilesLeft, totalWaits: [0, 0, 0, 0] }; // Save it in a global variable to not calculate this expensive step multiple times per turn
-			for (let pl = 1; pl <= 3; pl++) {
+			for (let pl = 1; pl < getNumberOfPlayers(); pl++) {
 				totalPossibleWaits.totalWaits[pl] = getTotalPossibleWaits(pl);
 			}
 		}
@@ -3417,7 +3415,7 @@ function isPlayerPushing(player) {
 		return 0;
 	}
 
-	var pushValue = -1 + (lastDiscardSafety.reduce((v1, v2) => v1 + v2, 0) / (lastDiscardSafety.length * 20));
+	var pushValue = -1 + (lastDiscardSafety.reduce((v1, v2) => v1 + (v2 * 20), 0) / lastDiscardSafety.length);
 	if (pushValue > 1) {
 		pushValue = 1;
 	}
@@ -3493,6 +3491,10 @@ function getWaitScoreForTileAndPlayer(player, tile, includeOthers, useKnowledgeO
 	}
 	var furitenFactor = getFuritenValue(player, tile, includeOthers);
 
+	if (furitenFactor == 0) {
+		return 0;
+	}
+
 	//Less priority on Ryanmen and Bridge Wait when player is doing Toitoi
 	var toitoiFactor = 1 - (isDoingToiToi(player) / 3);
 
@@ -3533,8 +3535,6 @@ function getWaitScoreForTileAndPlayer(player, tile, includeOthers, useKnowledgeO
 	if (score > 200) {
 		score = 200 + (Math.sqrt(score)); //add "overflow" that is worth less
 	}
-
-	score /= 1.6; //Divide by this number to normalize result (more or less)
 
 	return score;
 }
@@ -3616,7 +3616,7 @@ function shouldKeepSafeTile(player, hand, danger) {
 		}
 	}
 
-	var sakigiri = (2 - safeTiles) * (SAKIGIRI_VALUE * 5);
+	var sakigiri = (2 - safeTiles) * (SAKIGIRI * 2);
 	if (sakigiri < 0) { // More than 2 safe tiles: Sakigiri not necessary
 		return 0;
 	}
@@ -3804,11 +3804,15 @@ function mainOwnTurn() {
 
 	log("##### OWN TURN #####");
 	log("Debug String: " + getDebugString());
-	log("Shimocha Tenpai Chance: " + Number(isPlayerTenpai(1) * 100).toFixed(1) + "%, Expected Hand Value: " + Number(getExpectedHandValue(1).toFixed(0)));
-	log("Toimen Tenpai Chance: " + Number(isPlayerTenpai(2) * 100).toFixed(1) + "%, Expected Hand Value: " + Number(getExpectedHandValue(2).toFixed(0)));
-	log("Kamicha Tenpai Chance: " + Number(isPlayerTenpai(3) * 100).toFixed(1) + "%, Expected Hand Value: " + Number(getExpectedHandValue(3).toFixed(0)));
-	log("Current State: " + getDebugString(false));
-	log("Current Danger Level: " + getCurrentDangerLevel());
+	if (getNumberOfPlayers() == 3) {
+		log("Right Player Tenpai Chance: " + Number(isPlayerTenpai(1) * 100).toFixed(1) + "%, Expected Hand Value: " + Number(getExpectedHandValue(1).toFixed(0)));
+		log("Left Player Tenpai Chance: " + Number(isPlayerTenpai(2) * 100).toFixed(1) + "%, Expected Hand Value: " + Number(getExpectedHandValue(2).toFixed(0)));
+	}
+	else {
+		log("Shimocha Tenpai Chance: " + Number(isPlayerTenpai(1) * 100).toFixed(1) + "%, Expected Hand Value: " + Number(getExpectedHandValue(1).toFixed(0)));
+		log("Toimen Tenpai Chance: " + Number(isPlayerTenpai(2) * 100).toFixed(1) + "%, Expected Hand Value: " + Number(getExpectedHandValue(2).toFixed(0)));
+		log("Kamicha Tenpai Chance: " + Number(isPlayerTenpai(3) * 100).toFixed(1) + "%, Expected Hand Value: " + Number(getExpectedHandValue(3).toFixed(0)));
+	}
 
 	determineStrategy(); //Get the Strategy for the current situation. After calls so it does not reset folds
 
