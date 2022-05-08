@@ -100,8 +100,8 @@ MODE = MODE == null ? AIMODE.AUTO : parseInt(MODE);
 var guiDiv = document.createElement("div");
 var guiSpan = document.createElement("span");
 var startButton = document.createElement("button");
-var autorunCheckbox = document.createElement("input");
 var aimodeCombobox = document.createElement("select");
+var autorunCheckbox = document.createElement("input");
 var roomCombobox = document.createElement("select");
 var currentActionOutput = document.createElement("input");
 var debugButton = document.createElement("button");
@@ -134,6 +134,13 @@ function initGui() {
 	};
 	guiSpan.appendChild(startButton);
 
+	refreshAIMode();
+	aimodeCombobox.style.marginRight = "15px";
+	aimodeCombobox.onchange = function() {
+		aiModeChange();
+	};
+	guiSpan.appendChild(aimodeCombobox);
+
 	autorunCheckbox.type = "checkbox";
 	autorunCheckbox.id = "autorun";
 	autorunCheckbox.onclick = function () {
@@ -148,13 +155,6 @@ function initGui() {
 	checkboxLabel.appendChild(document.createTextNode('Autostart'));
 	checkboxLabel.style.marginRight = "15px";
 	guiSpan.appendChild(checkboxLabel);
-
-	refreshAIMode();
-	aimodeCombobox.style.marginRight = "15px";
-	aimodeCombobox.onchange = function() {
-		aiModeChange();
-	};
-	guiSpan.appendChild(aimodeCombobox);
 
 	refreshRoomSelection();
 
