@@ -109,7 +109,7 @@ function main() {
 
 	showCrtActionMsg("Calculating best move...");
 
-	setTimeout(mainOwnTurn, 500 + (Math.random() * 500));
+	setTimeout(mainOwnTurn, 200 + (Math.random() * 200));
 }
 
 var oldOps = []
@@ -137,7 +137,7 @@ function checkPlayerOpChanged() {
 	return false;
 }
 
-function mainOwnTurn() {
+async function mainOwnTurn() {
 	//HELP MODE, if player not operate, just skip
 	if (MODE === AIMODE.HELP) {
 		if (!checkPlayerOpChanged()) {
@@ -203,13 +203,13 @@ function mainOwnTurn() {
 		switch (operation.type) {
 			case getOperations().dapai:
 				isConsideringCall = false;
-				discard();
+				await discard();
 				break;
 			case getOperations().eat:
-				callTriple(operation.combination, getOperations().eat);
+				await callTriple(operation.combination, getOperations().eat);
 				break;
 			case getOperations().peng:
-				callTriple(operation.combination, getOperations().peng);
+				await callTriple(operation.combination, getOperations().peng);
 				break;
 			case getOperations().ming_gang: //From others
 				callDaiminkan();
