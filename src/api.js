@@ -140,7 +140,7 @@ function makeCall(type) {
 		app.NetAgent.sendReq2MJ('FastTest', 'inputChiPengGang', { type: type, index: 0, timeuse: Math.random() * 2 + 1 });
 		view.DesktopMgr.Inst.WhenDoOperation();
 	} else {
-		showCrtStrategyMsg(`call ${getCallNameByType(type)} accepted;`);
+		showCrtStrategyMsg(`Accept: Call ${getCallNameByType(type)};`);
 	}
 }
 
@@ -149,7 +149,7 @@ function makeCallWithOption(type, option) {
 		app.NetAgent.sendReq2MJ('FastTest', 'inputChiPengGang', { type: type, index: option, timeuse: Math.random() * 2 + 1 });
 		view.DesktopMgr.Inst.WhenDoOperation();
 	} else {
-		showCrtStrategyMsg(`call ${getCallNameByType(type)} with ${option} accepted;`);
+		showCrtStrategyMsg(`Accept ${option}: Call ${getCallNameByType(type)};`);
 	}
 }
 
@@ -174,7 +174,7 @@ function sendRiichiCall(tile, moqie) {
 		app.NetAgent.sendReq2MJ('FastTest', 'inputOperation', { type: mjcore.E_PlayOperation.liqi, tile: tile, moqie: moqie, timeuse: Math.random() * 2 + 1 }); //Moqie: Throwing last drawn tile (Riichi -> false)
 	} else {
 		let tileName = getTileEmojiByName(tile);
-		showCrtStrategyMsg(`riichi ${tileName};`);
+		showCrtStrategyMsg(`Riichi: ${tileName};`);
 	}
 }
 
@@ -184,7 +184,7 @@ function sendKitaCall() {
 		app.NetAgent.sendReq2MJ('FastTest', 'inputOperation', { type: mjcore.E_PlayOperation.babei, moqie: moqie, timeuse: Math.random() * 2 + 1 });
 		view.DesktopMgr.Inst.WhenDoOperation();
 	} else {
-		showCrtStrategyMsg(`kita accepted;`);
+		showCrtStrategyMsg(`Accept: Kita;`);
 	}
 }
 
@@ -193,18 +193,29 @@ function sendAbortiveDrawCall() {
 		app.NetAgent.sendReq2MJ('FastTest', 'inputOperation', { type: mjcore.E_PlayOperation.jiuzhongjiupai, index: 0, timeuse: Math.random() * 2 + 1 });
 		view.DesktopMgr.Inst.WhenDoOperation();
 	} else {
-		showCrtStrategyMsg(`Kyuushu Kyuuhai accepted;`);
+		showCrtStrategyMsg(`Accept: Kyuushu Kyuuhai;`);
 	}
 }
 
 function callDiscard(tileNumber) {
 	if (MODE === AIMODE.AUTO) {
-		view.DesktopMgr.Inst.players[0]._choose_pai = view.DesktopMgr.Inst.players[0].hand[tileNumber];
-		view.DesktopMgr.Inst.players[0].DoDiscardTile();
+		try {
+      view.DesktopMgr.Inst.players[0]._choose_pai = view.DesktopMgr.Inst.players[0].hand[tileNumber];
+      view.DesktopMgr.Inst.players[0].DoDiscardTile();
+    }
+    catch {
+      log("Failed to decline the discard.");
+    }
 	} else {
-		let tile = ownHand[tileNumber];
-		let tileName = getTileName(tile, false);
-		showCrtStrategyMsg(`discard ${tileName};`);
+		let tileID = ownHand[tileNumber];
+		let tileName = getTileName(tileID, false);
+		showCrtStrategyMsg(`Discard: ${tileName};`);
+		if (CHANGE_RECOMMEND_TILE_COLOR) {
+			view.DesktopMgr.Inst.mainrole.hand.forEach(
+				tile => tile.val.toString() == tileID ? 
+					tile._SetColor(new Laya.Vector4(0.5, 0.8, 0.9, 1)) 
+					: tile._SetColor(new Laya.Vector4(1, 1, 1, 1)));
+		}
 	}
 }
 
@@ -297,6 +308,17 @@ function getRooms() {
 	}
 }
 
+// Returns the room of the current game as a number: Bronze = 1, Silver = 2 etc.
+function getCurrentRoom() {
+	try {
+		var currentRoom = view.DesktopMgr.Inst.game_config.meta.mode_id;
+		return getRooms().map_[currentRoom].room;
+	}
+	catch {
+		return 0;
+	}
+}
+
 // Client language: ["chs", "chs_t", "en", "jp"]
 function getLanguage() {
 	return GameMgr.client_language;
@@ -305,6 +327,26 @@ function getLanguage() {
 // Name of a room in client language
 function getRoomName(room) {
 	return room["room_name_" + getLanguage()] + " (" + game.Tools.room_mode_desc(room.mode) + ")";
+}
+
+//How much seconds left for a turn (base value, 20 at start)
+function getOverallTimeLeft() {
+	try {
+		return uiscript.UI_DesktopInfo.Inst._timecd._add;
+	}
+	catch {
+		return 20;
+	}
+}
+
+//How much time was left in the last turn?
+function getLastTurnTimeLeft() {
+	try {
+		return uiscript.UI_DesktopInfo.Inst._timecd._pre_sec;
+	}
+	catch {
+		return 25;
+	}
 }
 
 // Extend some internal MJSoul functions with additional code
