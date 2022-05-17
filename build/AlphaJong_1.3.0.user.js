@@ -3,13 +3,14 @@
 // @namespace    alphajong
 // @version      1.3.0
 // @description  A Mahjong Soul Bot.
-// @author       ryan
+// @author       Jimboom7
 // @match        https://mahjongsoul.game.yo-star.com/*
 // @match        https://majsoul.com/*
 // @match        https://game.maj-soul.com/*
 // @match        https://majsoul.union-game.com/*
 // @match        https://game.mahjongsoul.com/*
 // ==/UserScript==
+
 
 //################################
 // PARAMETERS
@@ -18,7 +19,7 @@
 
 /* PERFORMANCE MODE
 * Range 0 to 4. Decrease calculation time at the cost of efficiency (2 equals the time of ai version 1.2.1 and before).
-* 0 = Highest Precision and Calculation Time. 4 = Lowest Precision and Calculation Time.
+* 4 = Highest Precision and Calculation Time. 0 = Lowest Precision and Calculation Time.
 * Note: The bot will automatically decrease the performance mode when it approaches the time limit.
 * Note 2: Firefox is usually able to run the script faster than Chrome.
 */
@@ -102,6 +103,7 @@ ROOM = ROOM == null ? 2 : ROOM
 
 var MODE = window.localStorage.getItem("alphajongAIMode")
 MODE = MODE == null ? AIMODE.AUTO : parseInt(MODE);
+
 
 //################################
 // GUI
@@ -296,6 +298,7 @@ function clearCrtStrategyMsg() {
 	showingStrategy = false;
 	currentActionOutput.value = "";
 }
+
 //################################
 // API (MAHJONG SOUL)
 // Returns data from Mahjong Souls Javascript
@@ -498,20 +501,20 @@ function sendAbortiveDrawCall() {
 function callDiscard(tileNumber) {
 	if (MODE === AIMODE.AUTO) {
 		try {
-      view.DesktopMgr.Inst.players[0]._choose_pai = view.DesktopMgr.Inst.players[0].hand[tileNumber];
-      view.DesktopMgr.Inst.players[0].DoDiscardTile();
-    }
-    catch {
-      log("Failed to decline the discard.");
-    }
+			view.DesktopMgr.Inst.players[0]._choose_pai = view.DesktopMgr.Inst.players[0].hand[tileNumber];
+			view.DesktopMgr.Inst.players[0].DoDiscardTile();
+		}
+		catch {
+			log("Failed to decline the discard.");
+		}
 	} else {
 		let tileID = ownHand[tileNumber];
 		let tileName = getTileName(tileID, false);
 		showCrtStrategyMsg(`Discard: ${tileName};`);
 		if (CHANGE_RECOMMEND_TILE_COLOR) {
 			view.DesktopMgr.Inst.mainrole.hand.forEach(
-				tile => tile.val.toString() == tileID ? 
-					tile._SetColor(new Laya.Vector4(0.5, 0.8, 0.9, 1)) 
+				tile => tile.val.toString() == tileID ?
+					tile._SetColor(new Laya.Vector4(0.5, 0.8, 0.9, 1))
 					: tile._SetColor(new Laya.Vector4(1, 1, 1, 1)));
 		}
 	}
@@ -667,7 +670,7 @@ function trackDiscardTiles() {
 				}
 				setData(false);
 				visibleTiles.push(arguments[0]);
-				var danger = getTileDanger(arguments[0], null, seat2LocalPosition(this.player.seat));
+				var danger = getTileDanger(arguments[0], seat2LocalPosition(this.player.seat));
 				if (arguments[2] && danger < 0.01) { // Ignore Tsumogiri of a safetile, set it to average danger
 					danger = 0.05;
 				}
@@ -677,6 +680,8 @@ function trackDiscardTiles() {
 		})(view.DesktopMgr.Inst.players[player].container_qipai.AddQiPai);
 	}
 }
+
+
 //################################
 // UTILS
 // Contains utility functions
@@ -1184,7 +1189,9 @@ function isTerminalOrHonor(tile) {
 
 // Returns a number how "good" the wait is. An average wait is 1, a bad wait (like a middle tile) is lower, a good wait (like an honor tile) is higher.
 function getWaitQuality(tile) {
-	return 1.3 - (getDealInChanceForTileAndPlayer(0, tile, 1) * 5);
+	var quality = 1.3 - (getDealInChanceForTileAndPlayer(0, tile, 1) * 5);
+	quality = quality < 0.7 ? 0.7 : quality;
+	return quality;
 }
 
 //Calculate the shanten number. Based on this: https://www.youtube.com/watch?v=69Xhu-OzwHM
@@ -1332,7 +1339,7 @@ function isValueTile(tile) {
 
 //Return a danger value which is the threshold for folding (danger higher than this value -> fold)
 function getFoldThreshold(tilePrio, hand) {
-	var handScore = tilePrio.score.open;
+	var handScore = tilePrio.score.open * 1.3; // Raise this value a bit so open hands dont get folded too quickly
 	if (isClosed) {
 		handScore = tilePrio.score.riichi;
 	}
@@ -1426,6 +1433,11 @@ function shouldRiichi(tilePrio) {
 	var badWait = tilePrio.waits < 6 - RIICHI;
 	var lotsOfDoraIndicators = tilePrio.dora.length >= 3;
 
+	//Chiitoitsu
+	if (strategy == STRATEGIES.CHIITOITSU) {
+		badWait = tilePrio.waits < 3 - RIICHI;
+	}
+
 	//Thirteen Orphans
 	if (strategy == STRATEGIES.THIRTEEN_ORPHANS) {
 		log("Decline Riichi because of Thirteen Orphan strategy.");
@@ -1463,7 +1475,7 @@ function shouldRiichi(tilePrio) {
 	}
 
 	// High Danger and hand not worth much or bad wait
-	if (getCurrentDangerLevel() > 4000 && (tilePrio.score.riichi < 5000 - (RIICHI * 1000) || badWait)) {
+	if (getCurrentDangerLevel() > 5000 && (tilePrio.score.riichi < 5000 - (RIICHI * 1000) || badWait)) {
 		log("Decline Riichi because of worthless hand and high danger.");
 		return false;
 	}
@@ -1570,6 +1582,7 @@ function getTileEmojiByName(name) {
 	let tile = getTileFromString(name);
 	return getTileEmoji(tile.type, tile.index, tile.dora);
 }
+
 
 //################################
 // LOGGING
@@ -1822,6 +1835,7 @@ function getDebugString(useRaw = true) {
 	debugString += tilesLeft;
 	return debugString;
 }
+
 
 //################################
 // YAKU
@@ -2200,6 +2214,7 @@ function getChinitsu(hand) {
 	return { open: 0, closed: 0 };
 }
 
+
 //################################
 // AI OFFENSE
 // Offensive part of the AI
@@ -2234,6 +2249,12 @@ function determineStrategy() {
 //Call a Chi/Pon
 //combination example: Array ["6s|7s", "7s|9s"]
 async function callTriple(combinations, operation) {
+
+	if (!strategyAllowsCalls) { //No Calls allowed
+		log("Strategy allows no calls! Declined!");
+		declineCall(operation);
+		return false;
+	}
 
 	log("Consider call on " + getTileName(getTileForCall()));
 
@@ -2281,12 +2302,6 @@ async function callTriple(combinations, operation) {
 		}
 	}
 
-	if (!strategyAllowsCalls) { //No Calls allowed
-		log("Strategy allows no calls! Declined!");
-		declineCall(operation);
-		return false;
-	}
-
 	if (comb == -1) {
 		log("Could not find combination. Call declined!");
 		declineCall(operation);
@@ -2326,7 +2341,7 @@ async function callTriple(combinations, operation) {
 		return false;
 	}
 
-	if (isClosed && newHandValue.score.open < 1000 + (CALL_PON_CHI * 500) && newHandValue.shanten >= 4 - CALL_PON_CHI && seatWind != 1) { // Hand is worthless and slow and not dealer. Should prevent cheap yakuhai or tanyao calls
+	if (isClosed && newHandValue.score.open < 1500 - (CALL_PON_CHI * 200) && newHandValue.shanten >= 2 + CALL_PON_CHI && seatWind != 1) { // Hand is worthless and slow and not dealer. Should prevent cheap yakuhai or tanyao calls
 		log("Hand is cheap and slow! Declined!");
 		declineCall(operation);
 		return false;
@@ -2346,14 +2361,14 @@ async function callTriple(combinations, operation) {
 		log("Call accepted because of high value hand!");
 	}
 	else if (newHandValue.score.open >= handValue.score.closed * 1.75 && //Call gives additional value to hand
-		((newHandValue.score.open >= 2000 - (CALL_PON_CHI * 200) - ((3 - newHandValue.shanten) * 200)) || //And either hand is not extremely cheap...
+		((newHandValue.score.open >= (2000 - (CALL_PON_CHI * 200) - ((3 - newHandValue.shanten) * 200))) / (seatWind == 1 ? 1.5 : 1) || //And either hand is not extremely cheap...
 			newHandTriples.pairs.filter(t => t.type == 3).length >= 2)) { //Or there are some honor pairs in hand (=can be called easily or act as safe discards)
 		log("Call accepted because it boosts the value of the hand!");
 	}
 	else if (newHandValue.shanten < handValue.shanten && //Call reduces shanten
 		newHandValue.score.open > handValue.score.open * 0.9 && //And loses not much value
 		newHandValue.score.open > handValue.score.closed * 0.7 && isBadWait && //And is a bad wait
-		((newHandValue.score.open >= 1000 - (CALL_PON_CHI * 100) - ((3 - newHandValue.shanten) * 100)) || //And hand is not extremely cheap
+		((newHandValue.score.open >= (1000 - (CALL_PON_CHI * 100) - ((3 - newHandValue.shanten) * 100)) / (seatWind == 1 ? 1.5 : 1)) || // And hand is not extremely cheap
 			newHandTriples.pairs.filter(t => t.type == 3).length >= 4) && //Or multiple honor pairs
 		(newHandTriples.pairs.filter(t => isValueTile(t))).length >= 2) {//And would open hand anyway with honor call
 		log("Call accepted because it reduces shanten!");
@@ -2805,7 +2820,7 @@ function getHandValues(hand, discardedTile) {
 
 			if (!isClosed && (!winning || tile2Furiten) &&
 				getNumberOfTilesInTileArray(triples3, tile2.index, tile2.type) == 3) {
-				numberOfTiles2 *= 2; //More value to possible triples when hand is open (can call pons from all players)
+				combFactor *= 2; //More value to possible triples when hand is open (can call pons from all players)
 			}
 
 			if (winning && !tile2Furiten) { //If this tile combination wins in 2 turns: calculate waits etc.
@@ -2888,9 +2903,6 @@ function getHandValues(hand, discardedTile) {
 	if (originalShanten == 0) { //Already in Tenpai: Look at waits instead
 		efficiency = waits / 10;
 	}
-	if (originalShanten == 1) { //1 Shanten: Look at a combination of efficiency and expected waits instead
-		efficiency = efficiency + (waits / 5);
-	}
 
 	if (baseShanten > 0) { //When not tenpai
 		expectedScore.riichi = calculateScore(0, yaku.closed + doraValue + 1 + 0.2 + getUradoraChance());
@@ -2904,7 +2916,7 @@ function getHandValues(hand, discardedTile) {
 	var danger = 0;
 	var sakigiri = 0;
 	if (typeof discardedTile != 'undefined') { //When deciding whether to call for a tile there is no discarded tile in the evaluation
-		danger = getTileDanger(discardedTile, hand);
+		danger = getTileDanger(discardedTile);
 		sakigiri = getSakigiriValue(hand, discardedTile);
 	}
 
@@ -2971,28 +2983,23 @@ function chiitoitsuPriorities() {
 		var yaku = { open: 0, closed: 0 };
 
 		//Possible Value, Yaku and Dora after Draw
-		var oldTile = { index: 9, type: 9, dora: false };
-		availableTiles.forEach(function (tile) {
-			if (tile.index != oldTile.index || tile.type != oldTile.type) {
-				var currentHand = [...handWithoutPairs];
-				currentHand.push(tile);
-				var numberOfTiles = getNumberOfNonFuritenTilesAvailable(tile.index, tile.type);
-				var chance = (numberOfTiles + (getWaitQuality(tile) / 10)) / availableTiles.length;
-				var pairs2 = getPairsAsArray(currentHand);
-				if (pairs2.length > 0) { //If the tiles improves the hand: Calculate the expected values
-					shanten += ((6 - (pairsValue + (pairs2.length / 2))) - baseShanten) * chance;
-					doraValue += (getNumberOfDoras(pairs2) - baseDora) * chance;
-					var y2 = getYaku(newHand, calls[0]);
-					yaku.open += (y2.open - baseYaku.open) * chance;
-					yaku.closed += (y2.closed - baseYaku.closed) * chance;
-					if (pairsValue + (pairs2.length / 2) == 7) { //Winning hand
-						waits = numberOfTiles * getWaitQuality(tile); //Factor waits by "uselessness" for opponents
-						yaku = getYaku(newHand, calls[0]);
-						doraValue = getNumberOfDoras(newHand); //When Tenpai: The Dora/Yaku for the specific waits needs to be calculated seperately
-					}
+		handWithoutPairs.forEach(function (tile) {
+			var currentHand = [...handWithoutPairs];
+			currentHand.push(tile);
+			var numberOfTiles = getNumberOfNonFuritenTilesAvailable(tile.index, tile.type);
+			var chance = (numberOfTiles + (getWaitQuality(tile) / 10)) / availableTiles.length;
+			var pairs2 = getPairsAsArray(currentHand);
+			if (pairs2.length > 0) { //If the tiles improves the hand: Calculate the expected values
+				shanten += ((6 - (pairsValue + (pairs2.length / 2))) - baseShanten) * chance;
+				doraValue += (getNumberOfDoras(pairs2) - baseDora) * chance;
+				var y2 = getYaku(newHand, calls[0]);
+				yaku.open += (y2.open - baseYaku.open) * chance;
+				yaku.closed += (y2.closed - baseYaku.closed) * chance;
+				if (pairsValue + (pairs2.length / 2) == 7) { //Winning hand
+					waits = numberOfTiles * getWaitQuality(tile);
+					doraValue = getNumberOfDoras(newHand) - baseDora;
 				}
 			}
-			oldTile = tile;
 		});
 		doraValue += baseDora;
 		yaku.open += baseYaku.open;
@@ -3010,7 +3017,7 @@ function chiitoitsuPriorities() {
 		if (originalShanten == 0) { //Already in Tenpai: Look at waits instead
 			efficiency = waits / 10;
 		}
-		var danger = getTileDanger(ownHand[i], newHand);
+		var danger = getTileDanger(ownHand[i]);
 
 		var sakigiri = getSakigiriValue(newHand, ownHand[i]);
 
@@ -3068,7 +3075,7 @@ function thirteenOrphansPriorities() {
 		}
 
 		var efficiency = shanten == originalShanten ? 1 : 0;
-		var danger = getTileDanger(ownHand[i], hand);
+		var danger = getTileDanger(ownHand[i]);
 		var sakigiri = getSakigiriValue(hand, ownHand[i], danger);
 		var yakuman = calculateScore(0, 13);
 		var expectedScore = { open: 0, closed: yakuman, riichi: yakuman };
@@ -3238,6 +3245,7 @@ function getDiscardTile(tiles) {
 	return tile;
 }
 
+
 //################################
 // AI DEFENSE
 // Defensive part of the AI
@@ -3246,7 +3254,7 @@ function getDiscardTile(tiles) {
 //Returns danger of tile for all players (from a specific players perspective, see second param) as a number from 0-100+
 //Takes into account Genbutsu (Furiten for opponents), Suji, Walls and general knowledge about remaining tiles.
 //From the perspective of playerPerspective parameter
-function getTileDanger(tile, hand, playerPerspective = 0) {
+function getTileDanger(tile, playerPerspective = 0) {
 	var dangerPerPlayer = [0, 0, 0, 0];
 	for (var player = 0; player < getNumberOfPlayers(); player++) { //Foreach Player
 		if (player == playerPerspective) {
@@ -3263,8 +3271,8 @@ function getTileDanger(tile, hand, playerPerspective = 0) {
 
 	var danger = dangerPerPlayer[0] + dangerPerPlayer[1] + dangerPerPlayer[2] + dangerPerPlayer[3];
 
-	if (getCurrentDangerLevel() < 1500) { //Scale it down for low danger levels
-		danger *= 1 - ((1500 - getCurrentDangerLevel()) / 1500);
+	if (getCurrentDangerLevel() < 2500) { //Scale it down for low danger levels
+		danger *= 1 - ((2500 - getCurrentDangerLevel()) / 2500);
 	}
 
 	return danger;
@@ -3611,7 +3619,7 @@ function isDoingHonitsu(player, type) {
 		return 1;
 	}
 	var percentageOfDiscards = discards[player].slice(0, 10).filter(tile => tile.type == type).length / discards[player].slice(0, 10).length;
-	if (percentageOfDiscards > 0.2) {
+	if (percentageOfDiscards > 0.2 || discards[player].slice(0, 10).length == 0) {
 		return 0;
 	}
 	var confidence = (Math.pow(parseInt(calls[player].length / 3), 2) / 10) - percentageOfDiscards + 0.1;
@@ -3819,6 +3827,7 @@ function isTileCloseToDora(tile) {
 	}
 	return false;
 }
+
 //################################
 // MAIN
 // Main Class, starts the bot and sets up all necessary variables.
